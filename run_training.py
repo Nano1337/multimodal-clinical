@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader
 
 # internal files
 from get_data import get_dataset
-from model import FusionNet
+from joint_model import *
 
 # set reproducible 
 import torch
@@ -61,7 +61,7 @@ if __name__ == "__main__":
         prefetch_factor = 4,
     )
 
-    valid_loader = DataLoader(
+    val_loader = DataLoader(
         val_dataset, 
         batch_size=args.batch_size, 
         num_workers=args.num_cpus, 
@@ -78,7 +78,7 @@ if __name__ == "__main__":
     )
 
     # get model
-    model = FusionNet(input_dim_mlp=5, input_features_gru=12, hidden_dim_gru=32, num_layers_gru=1)
+    model = MultimodalMimicModel(args)
 
     # define trainer
     trainer = None
@@ -92,7 +92,7 @@ if __name__ == "__main__":
             deterministic=True, 
             default_root_dir="ckpts/",  
             precision="bf16-mixed",
-            num_sanity_val_steps=0,
+            num_sanity_val_steps=1,
         )
     else: 
         raise NotImplementedError("It is not advised to train without a GPU")

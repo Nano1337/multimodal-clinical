@@ -2,6 +2,8 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+import pytorch_lightning as pl
+
 class MLP(nn.Module):
     def __init__(self, input_dim, num_classes):
         super(MLP, self).__init__()
@@ -43,15 +45,15 @@ class FusionNet(nn.Module):
             loss_fn
             ):
         super(FusionNet, self).__init__()
-        self.mlp = MLP(mlp_input_dim)
-        self.gru = GRUNet(gru_input_features, gru_hidden_dim, num_layers_gru)
+        self.mlp = MLP(mlp_input_dim, num_classes)
+        self.gru = GRUNet(gru_input_features, gru_hidden_dim, num_layers_gru, num_classes)
 
         self.num_classes = num_classes
         self.loss_fn = loss_fn
 
     def forward(self, x_static, x_time_series, label):
-        x1_logits = self.mlp(x_static, self.num_classes)
-        x2_logits = self.gru(x_time_series, self.num_classes)
+        x1_logits = self.mlp(x_static)
+        x2_logits = self.gru(x_time_series)
 
         # fuse at logit level
         avg_logits = (x1_logits + x2_logits) / 2
@@ -62,138 +64,142 @@ class FusionNet(nn.Module):
 
 class MultimodalMimicModel(pl.LightningModule): 
 
-    def __init__(self): 
-        super(MultimodalMimicModel, self, args).__init__()
-            input_dim_mlp = 5  # Number of features for modality 1
-            input_features_gru = 12  # Number of features per time step for modality 2
-            hidden_dim_gru = 32  # Hidden dimension for GRU
-            num_layers_gru = 1  # Number of GRU layers
+    def __init__(self, args): 
+        super(MultimodalMimicModel, self).__init__()
 
-            self.model = self._build_model()
+        self.args = args
+        self.model = self._build_model()
 
-            self.val_metrics = {
-                "val_loss": [], 
-                "val_acc": [],
-            }
+        self.val_metrics = {
+            "val_loss": [], 
+            "val_acc": [],
+        }
 
-            self.test_metrics = {
-                "test_loss", 
-                "test_acc", 
-            }
+        self.test_metrics = {
+            "test_loss": [], 
+            "test_acc": [], 
+        }
 
-        def forward(self, x1, x2, label): 
-            return self.model(x1, x2, label)
+    def _convert_type(self, batch):
+        x1, x2, label = batch
 
-        def training_step(self, batch, batch_idx): 
+        x1, x2 = x1.to(self.dtype), x2.to(self.dtype)
 
-            # Extract static info, timeseries, and label from batch
-            x1, x2, label = batch
+        return (x1, x2, label)
 
-            # Get predictions and loss from model
-            x1_logits, x2_logits, avg_logits, loss = self.model(x1, x2, label)
+    def forward(self, x1, x2, label): 
+        return self.model(x1, x2, label)
 
-            # Calculate accuracy
-            image_acc = torch.mean((torch.argmax(x1_logits, dim=1) == label).float())
-            text_acc = torch.mean((torch.argmax(x2_logits, dim=1) == label).float())
-            joint_acc = torch.mean((torch.argmax(avg_logits, dim=1) == label).float())
+    def training_step(self, batch, batch_idx): 
 
-            # Log loss and accuracy
-            self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=False, logger=True)
-            self.log("train_acc", joint_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
+        # Extract static info, timeseries, and label from batch
+        x1, x2, label = self._convert_type(batch)
 
-            # log modality-specific avg and losses
-            self.log("image_train_acc", image_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
-            self.log("text_train_acc", text_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
+        # Get predictions and loss from model
+        x1_logits, x2_logits, avg_logits, loss = self.model(x1, x2, label)
 
-            # Return the loss
-            return loss
+        # Calculate accuracy
+        x1_acc = torch.mean((torch.argmax(x1_logits, dim=1) == label).float())
+        x2_acc = torch.mean((torch.argmax(x2_logits, dim=1) == label).float())
+        joint_acc = torch.mean((torch.argmax(avg_logits, dim=1) == label).float())
 
-        def validation_step(self, batch, batch_idx): 
+        # Log loss and accuracy
+        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=False, logger=True)
+        self.log("train_acc", joint_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
 
-            # Extract static info, timeseries, and label from batch
-            x1, x2, label = batch
+        # log modality-specific avg and losses
+        self.log("x1_train_acc", x1_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
+        self.log("x2_train_acc", x2_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
 
-            # Get predictions and loss from model
-            x1_logits, x2_logits, avg_logits, loss = self.model(x1, x2, label)
+        # Return the loss
+        return loss
 
-            # Calculate accuracy
-            image_acc = torch.mean((torch.argmax(x1_logits, dim=1) == label).float())
-            text_acc = torch.mean((torch.argmax(x2_logits, dim=1) == label).float())
-            joint_acc = torch.mean((torch.argmax(avg_logits, dim=1) == label).float())
+    def validation_step(self, batch, batch_idx): 
 
-            # Log loss and accuracy
-            self.log("val_loss", loss, on_step=True, on_epoch=True, prog_bar=False, logger=True)
-            self.log("val_acc", joint_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
+        # Extract static info, timeseries, and label from batch
+        x1, x2, label = self._convert_type(batch)
 
-            # log modality-specific avg and losses
-            self.log("image_val_acc", image_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
-            self.log("text_val_acc", text_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
+        # Get predictions and loss from model
+        x1_logits, x2_logits, avg_logits, loss = self.model(x1, x2, label)
 
-            self.val_metrics["val_loss"].append(loss)
-            self.val_metrics["val_acc"].append(joint_acc)
+        # Calculate accuracy
+        x1_acc = torch.mean((torch.argmax(x1_logits, dim=1) == label).float())
+        x2_acc = torch.mean((torch.argmax(x2_logits, dim=1) == label).float())
+        joint_acc = torch.mean((torch.argmax(avg_logits, dim=1) == label).float())
 
-            # Return the loss
-            return loss
+        # Log loss and accuracy
+        self.log("val_loss", loss, on_step=True, on_epoch=True, prog_bar=False, logger=True)
+        self.log("val_acc", joint_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
 
-        def on_validation_epoch_end(self) -> None:
-            avg_loss = torch.stack(self.val_metrics["val_loss"]).mean()
-            avg_acc = torch.stack(self.val_metrics["val_acc"]).mean()
+        # log modality-specific avg and losses
+        self.log("x1_val_acc", x1_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
+        self.log("x2_val_acc", x2_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
 
-            self.log("val_loss", avg_loss, on_step=False, on_epoch=True, prog_bar=False, logger=True)
-            self.log("val_acc", avg_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
-            
-            self.val_metrics["val_loss"].clear()
-            self.val_metrics["val_acc"].clear()
+        self.val_metrics["val_loss"].append(loss)
+        self.val_metrics["val_acc"].append(joint_acc)
 
-         # Optional for pl.LightningModule
-        def test_step(self, batch, batch_idx):
+        # Return the loss
+        return loss
 
-            # Extract static info, timeseries, and label from batch
-            x1, x2, label = batch
+    def on_validation_epoch_end(self) -> None:
+        avg_loss = torch.stack(self.val_metrics["val_loss"]).mean()
+        avg_acc = torch.stack(self.val_metrics["val_acc"]).mean()
 
-            # Get predictions and loss from model
-            x1_logits, x2_logits, avg_logits, loss = self.model(x1, x2, label)
-
-            # Calculate accuracy
-            image_acc = torch.mean((torch.argmax(x1_logits, dim=1) == label).float())
-            text_acc = torch.mean((torch.argmax(x2_logits, dim=1) == label).float())
-            joint_acc = torch.mean((torch.argmax(avg_logits, dim=1) == label).float())
-
-            # Log loss and accuracy
-            self.log("test_loss", loss, on_step=True, on_epoch=True, prog_bar=False, logger=True)
-            self.log("test_acc", joint_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
-
-            # log modality-specific avg and losses
-            self.log("image_test_acc", image_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
-            self.log("text_test_acc", text_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
-
-            self.test_metrics["test_loss"].append(loss)
-            self.test_metrics["test_acc"].append(joint_acc)
-
-            # Return the loss
-            return loss
+        self.log("val_loss", avg_loss, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("val_acc", avg_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
         
-        def on_test_epoch_end(self):
-            avg_loss = torch.stack(self.test_metrics["test_loss"]).mean()
-            avg_accuracy = torch.stack(self.test_metrics["test_acc"]).mean()
+        self.val_metrics["val_loss"].clear()
+        self.val_metrics["val_acc"].clear()
 
-            self.log("avg_test_loss", avg_loss, on_step=False, on_epoch=True, prog_bar=False, logger=True)
-            self.log("avg_test_acc", avg_accuracy, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        # Optional for pl.LightningModule
+    def test_step(self, batch, batch_idx):
 
-            self.test_metrics["test_loss"].clear()
-            self.test_metrics["test_acc"].clear()
+        # Extract static info, timeseries, and label from batch
+        x1, x2, label = self._convert_type(batch)
 
-        # Required for pl.LightningModule
-        def configure_optimizers(self):
-            optimizer = torch.optim.Adam(self.parameters(), lr=args.learning_rate)
-            return optimizer
+        # Get predictions and loss from model
+        x1_logits, x2_logits, avg_logits, loss = self.model(x1, x2, label)
 
-        def _build_model(self):
-            return FusionNet(
-                mlp_input_dim=5, 
-                gru_input_features=12, 
-                gru_hidden_dim=32, 
-                num_layers_gru=1, 
-                num_classes=6, 
-                loss_fn=nn.CrossEntropyLoss()
-            )
+        # Calculate accuracy
+        x1_acc = torch.mean((torch.argmax(x1_logits, dim=1) == label).float())
+        x2_acc = torch.mean((torch.argmax(x2_logits, dim=1) == label).float())
+        joint_acc = torch.mean((torch.argmax(avg_logits, dim=1) == label).float())
+
+        # Log loss and accuracy
+        self.log("test_loss", loss, on_step=True, on_epoch=True, prog_bar=False, logger=True)
+        self.log("test_acc", joint_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
+
+        # log modality-specific avg and losses
+        self.log("x1_test_acc", x1_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
+        self.log("x2_test_acc", x2_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
+
+        self.test_metrics["test_loss"].append(loss)
+        self.test_metrics["test_acc"].append(joint_acc)
+
+        # Return the loss
+        return loss
+    
+    def on_test_epoch_end(self):
+        avg_loss = torch.stack(self.test_metrics["test_loss"]).mean()
+        avg_accuracy = torch.stack(self.test_metrics["test_acc"]).mean()
+
+        self.log("avg_test_loss", avg_loss, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("avg_test_acc", avg_accuracy, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+
+        self.test_metrics["test_loss"].clear()
+        self.test_metrics["test_acc"].clear()
+
+    # Required for pl.LightningModule
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.args.learning_rate)
+        return optimizer
+
+    def _build_model(self):
+        return FusionNet(
+            mlp_input_dim=5, 
+            gru_input_features=12, 
+            gru_hidden_dim=32, 
+            num_layers_gru=1, 
+            num_classes=6, 
+            loss_fn=nn.CrossEntropyLoss()
+        )
