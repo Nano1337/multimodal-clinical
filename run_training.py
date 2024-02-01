@@ -12,6 +12,7 @@ from torch.utils.data import DataLoader
 
 # internal files
 from get_data import get_dataset
+from model import FusionNet
 
 # set reproducible 
 import torch
@@ -60,12 +61,6 @@ if __name__ == "__main__":
         prefetch_factor = 4,
     )
 
-    for _ in range(3):
-        x1, x2, y = next(iter(train_loader))
-        print(x1.shape, x2.shape, y.shape)
-
-    exit()
-
     valid_loader = DataLoader(
         val_dataset, 
         batch_size=args.batch_size, 
@@ -83,7 +78,7 @@ if __name__ == "__main__":
     )
 
     # get model
-    model = None
+    model = FusionNet(input_dim_mlp=5, input_features_gru=12, hidden_dim_gru=32, num_layers_gru=1)
 
     # define trainer
     trainer = None
