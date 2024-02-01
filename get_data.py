@@ -4,12 +4,9 @@ From MultiBench: https://github.com/pliang279/MultiBench/blob/main/datasets/mimi
 
 """Implements dataloaders for generic MIMIC tasks."""
 from tqdm import tqdm
-from robustness.tabular_robust import add_tabular_noise
-from robustness.timeseries_robust import add_timeseries_noise
 import sys
 import os
 import numpy as np
-from torch.utils.data import DataLoader
 import random
 import pickle
 import copy
@@ -27,16 +24,12 @@ Mortality classes are predicting on how long from the date the data was recorded
 - 1 year
 - 1+ year
 """
-def get_dataloader(task, batch_size=40, num_workers=1, train_shuffle=True, imputed_path='im.pk', flatten_time_series=False):
-    """Get dataloaders for MIMIC dataset.
+def get_dataset(task, imputed_path='data/im.pk'):
+    """Get datasets for MIMIC 
 
     Args:
         task (int): Integer between -1 and 19 inclusive, -1 means mortality task, 0-19 means icd9 task.
-        batch_size (int, optional): Batch size. Defaults to 40.
-        num_workers (int, optional): Number of workers to load data in. Defaults to 1.
-        train_shuffle (bool, optional): Whether to shuffle training data or not. Defaults to True.
         imputed_path (str, optional): Datafile location. Defaults to 'im.pk'.
-        flatten_time_series (bool, optional): Whether to flatten time series data or not. Defaults to False.
     Returns:
         tuple: Tuple of training dataloader, validation dataloader, and test dataloader
     """
@@ -64,8 +57,6 @@ def get_dataloader(task, batch_size=40, num_workers=1, train_shuffle=True, imput
     static_dim = len(X_s[0])
     timestep = len(X_t[0])
     series_dim = len(X_t[0][0])
-    if flatten_time_series:
-        X_t = X_t.reshape(len(X_t), timestep*series_dim)
     if task < 0:
         y = datafile['adm_labels_all'][:, 1]
         admlbl = datafile['adm_labels_all']
@@ -88,31 +79,13 @@ def get_dataloader(task, batch_size=40, num_workers=1, train_shuffle=True, imput
         le = len(y)
     datasets = [(X_s[i], X_t[i], y[i]) for i in range(le)]
 
-    random.seed(10)
-
     random.shuffle(datasets)
 
-    valids = DataLoader(datasets[0:le//10], shuffle=False,
-                        num_workers=num_workers, batch_size=batch_size)
-    trains = DataLoader(datasets[le//5:], shuffle=train_shuffle,
-                        num_workers=num_workers, batch_size=batch_size)
+    trains = datasets[le//5:]
 
-    tests = dict()
-    tests['timeseries'] = []
-    for noise_level in tqdm(range(11)):
-        dataset_robust = copy.deepcopy(datasets[le//10:le//5])
+    valids = datasets[0:le//10]
+    
+    tests = datasets[le//10:le//5]
 
-        X_s_robust = [dataset_robust[i][0]
-                        for i in range(len(dataset_robust))]
-
-        X_t_robust = [dataset_robust[i][1]
-                        for i in range(len(dataset_robust))]
-        y_robust = [dataset_robust[i][2] for i in range(len(dataset_robust))]
-        if flatten_time_series:
-            tests['timeseries'].append(DataLoader([(X_s_robust[i], X_t_robust[i].reshape(timestep*series_dim), y_robust[i])
-                                       for i in range(len(y_robust))], shuffle=False, num_workers=num_workers, batch_size=batch_size))
-        else:
-            tests['timeseries'].append(DataLoader([(X_s_robust[i], X_t_robust[i], y_robust[i]) for i in range(
-                len(y_robust))], shuffle=False, num_workers=num_workers, batch_size=batch_size))
 
     return trains, valids, tests
