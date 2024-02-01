@@ -16,3 +16,6 @@ torch.set_float32_matmul_precision('medium')
 
 seed = 0
 seed_everything(seed, workers=True)
+
+if __name__ == "__main__": 
+    pass
