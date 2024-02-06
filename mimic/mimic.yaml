@@ -1,12 +1,9 @@
-num_classes: 2
+num_classes: 2 # 6 for mortality task, 2 for ICD-9 tasks
 batch_size: 32
 learning_rate: 1.0e-4
 num_epochs: 25
 dropout_p: 0.1
-text_embedder: "all-mpnet-base-v2"
-trained_model_version: "version_87"
-trained_model_path: null
 gpus: [0]
-data_path: "data/im.pk"
+data_path: "../data/mimic/im.pk"
 num_cpus: 2
-task_num: 7
+task_num: 7 # -1 is mortality, all others are for ICD-9 task

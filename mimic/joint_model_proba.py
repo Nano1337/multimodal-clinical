@@ -208,6 +208,6 @@ class MultimodalMimicModel(pl.LightningModule):
             gru_input_features=12, 
             gru_hidden_dim=32, 
             num_layers_gru=1, 
-            num_classes=6, 
+            num_classes=self.args.num_classes, 
             loss_fn=nn.NLLLoss()
         )

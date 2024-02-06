@@ -154,10 +154,7 @@ class EnricoDataset(Dataset):
         """
 
         example = self.example_list[self.keys[idx]]
-        print("Length of keys list", len(self.keys))
-        print("Trying to access index", idx)
-        print("Trying to access this index of example_list", self.example_list[self.keys[idx]])
-        exit() 
+
         screenId = example['screen_id']
         # image modality
         screenImg = Image.open(os.path.join(

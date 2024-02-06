@@ -66,7 +66,6 @@ if __name__ == "__main__":
         num_workers=args.num_cpus, 
         persistent_workers=True, 
         prefetch_factor=4,
-        sampler=sampler,
     )
 
     test_loader = DataLoader(
@@ -75,7 +74,6 @@ if __name__ == "__main__":
         num_workers=args.num_cpus, 
         persistent_workers=True, 
         prefetch_factor=4,
-        sampler=sampler,
     )
 
     # get model
