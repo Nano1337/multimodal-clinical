@@ -1,0 +1,10 @@
+num_classes: 20
+batch_size: 32
+learning_rate: 1.0e-4
+num_epochs: 25
+dropout_p: 0.1
+gpus: [0]
+data_path: "../data/enrico/"
+num_cpus: 2
+group_name: "enrico_cls20_jlogits_seeds"
+seed: 0
