@@ -21,7 +21,7 @@ torch.backends.cudnn.deterministc = True
 torch.backends.cudnn.benchmark = False
 torch.set_float32_matmul_precision('medium')
 
-seed = 4
+seed = 0
 seed_everything(seed, workers=True)
 
 DEFAULT_GPUS = [0]
@@ -29,18 +29,15 @@ DEFAULT_GPUS = [0]
 if __name__ == "__main__": 
     torch.multiprocessing.set_start_method('spawn')
 
+    # load configs into args
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", "--configs", type=str, default=None) 
     args = parser.parse_args()
-
-    # Load configuration from YAML file if specified
     if args.config:
         with open(args.config, "r") as yaml_file:
             cfg = yaml.safe_load(yaml_file)
     else:
         raise NotImplementedError
-
-    # put dictionary as args member variables
     for key, val in cfg.items():
         setattr(args, key, val)
 
@@ -61,8 +58,6 @@ if __name__ == "__main__":
         persistent_workers=True,
         prefetch_factor = 4,
     )
-
-
 
     val_loader = DataLoader(
         val_dataset, 
