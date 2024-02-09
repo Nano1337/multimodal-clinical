@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 # internal files
 from get_data import get_data
 # options: joint_model, ensemble_model, joint_model_proba
-from joint_model import *
+from joint_model_proba import *
 
 # set reproducible 
 import torch
