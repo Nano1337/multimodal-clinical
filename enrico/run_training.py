@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 # internal files
 from get_data import get_data
 # options: joint_model, ensemble_model, joint_model_proba
-from joint_model_proba import *
+from ensemble_model import *
 
 # set reproducible 
 import torch
@@ -93,8 +93,9 @@ if __name__ == "__main__":
             deterministic=True, 
             default_root_dir="ckpts/",  
             precision="bf16-mixed",
-            num_sanity_val_steps=0,
+            num_sanity_val_steps=0, # check validation 
             log_every_n_steps=30,
+            
         )
     else: 
         raise NotImplementedError("It is not advised to train without a GPU")

@@ -81,11 +81,15 @@ class MultimodalEnricoModel(pl.LightningModule):
         self.val_metrics = {
             "val_loss": [], 
             "val_acc": [],
+            "val_x1_acc": [], 
+            "val_x2_acc": [],
         }
 
         self.test_metrics = {
             "test_loss": [], 
             "test_acc": [], 
+            "test_x1_acc": [],
+            "test_x2_acc": [],
         }
 
     def forward(self, x1, x2, label): 
@@ -110,12 +114,6 @@ class MultimodalEnricoModel(pl.LightningModule):
         self.log("train_loss", avg_loss, on_step=True, on_epoch=True, prog_bar=False, logger=True)
         self.log("train_acc", joint_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
 
-        # log modality-specific avg and losses
-        self.log("x1_train_acc", x1_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
-        self.log("x2_train_acc", x2_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
-        self.log("x1_train_loss", x1_loss, on_step=True, on_epoch=True, prog_bar=False, logger=True)
-        self.log("x2_train_loss", x2_loss, on_step=True, on_epoch=True, prog_bar=False, logger=True)
-    
         # Return the loss
         return avg_loss
 
@@ -138,15 +136,10 @@ class MultimodalEnricoModel(pl.LightningModule):
         self.log("val_loss", avg_loss, on_step=True, on_epoch=True, prog_bar=False, logger=True)
         self.log("val_acc", joint_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
 
-        # log modality-specific avg and losses
-        self.log("x1_val_acc", x1_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
-        self.log("x2_val_acc", x2_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
-        self.log("x1_val_loss", x1_loss, on_step=True, on_epoch=True, prog_bar=False, logger=True)
-        self.log("x2_val_loss", x2_loss, on_step=True, on_epoch=True, prog_bar=False, logger=True)
-
-
         self.val_metrics["val_loss"].append(avg_loss)
         self.val_metrics["val_acc"].append(joint_acc)
+        self.val_metrics["val_x1_acc"].append(x1_acc)
+        self.val_metrics["val_x2_acc"].append(x2_acc)
 
         # Return the loss
         return avg_loss
@@ -154,14 +147,19 @@ class MultimodalEnricoModel(pl.LightningModule):
     def on_validation_epoch_end(self) -> None:
         avg_loss = torch.stack(self.val_metrics["val_loss"]).mean()
         avg_acc = torch.stack(self.val_metrics["val_acc"]).mean()
+        x1_acc = torch.mean(torch.stack(self.val_metrics["val_x1_acc"]))
+        x2_acc = torch.mean(torch.stack(self.val_metrics["val_x2_acc"]))
 
         self.log("val_loss", avg_loss, on_step=False, on_epoch=True, prog_bar=False, logger=True)
         self.log("val_acc", avg_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("x1_val_acc", x1_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("x2_val_acc", x2_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
         
         self.val_metrics["val_loss"].clear()
         self.val_metrics["val_acc"].clear()
+        self.val_metrics["val_x1_acc"].clear()
+        self.val_metrics["val_x2_acc"].clear()
 
-        # Optional for pl.LightningModule
     def test_step(self, batch, batch_idx):
 
         # Extract static info, timeseries, and label from batch
@@ -181,27 +179,29 @@ class MultimodalEnricoModel(pl.LightningModule):
         self.log("test_loss", avg_loss, on_step=True, on_epoch=True, prog_bar=False, logger=True)
         self.log("test_acc", joint_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
 
-        # log modality-specific avg and losses
-        self.log("x1_test_acc", x1_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
-        self.log("x2_test_acc", x2_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
-        self.log("x1_test_loss", x1_loss, on_step=True, on_epoch=True, prog_bar=False, logger=True)
-        self.log("x2_test_loss", x2_loss, on_step=True, on_epoch=True, prog_bar=False, logger=True)
-
         self.test_metrics["test_loss"].append(avg_loss)
         self.test_metrics["test_acc"].append(joint_acc)
+        self.test_metrics["test_x1_acc"].append(x1_acc)
+        self.test_metrics["test_x2_acc"].append(x2_acc)
 
         # Return the loss
         return avg_loss
     
     def on_test_epoch_end(self):
         avg_loss = torch.stack(self.test_metrics["test_loss"]).mean()
-        avg_accuracy = torch.stack(self.test_metrics["test_acc"]).mean()
+        avg_acc = torch.stack(self.test_metrics["test_acc"]).mean()
+        x1_acc = torch.mean(torch.stack(self.test_metrics["test_x1_acc"]))
+        x2_acc = torch.mean(torch.stack(self.test_metrics["test_x2_acc"]))
 
-        self.log("avg_test_loss", avg_loss, on_step=False, on_epoch=True, prog_bar=False, logger=True)
-        self.log("avg_test_acc", avg_accuracy, on_step=False, on_epoch=True, prog_bar=False, logger=True)
-
+        self.log("test_loss", avg_loss, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("test_acc", avg_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("x1_test_acc", x1_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("x2_test_acc", x2_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        
         self.test_metrics["test_loss"].clear()
         self.test_metrics["test_acc"].clear()
+        self.test_metrics["test_x1_acc"].clear()
+        self.test_metrics["test_x2_acc"].clear()
 
     # Required for pl.LightningModule
     def configure_optimizers(self):

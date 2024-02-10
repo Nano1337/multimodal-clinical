@@ -6,5 +6,5 @@ dropout_p: 0.1
 gpus: [0]
 data_path: "../data/enrico/"
 num_cpus: 2
-group_name: "enrico_c20_jproba_seeds"
-seed: 4674
+group_name: "enrico_cls20_ensemble_seeds"
+seed: 4
