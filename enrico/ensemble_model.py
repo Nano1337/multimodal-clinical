@@ -73,6 +73,12 @@ class FusionNet(nn.Module):
 class MultimodalEnricoModel(pl.LightningModule): 
 
     def __init__(self, args): 
+        """Initialize MultimodalEnricoModel.
+
+        Args: 
+            args (argparse.Namespace): Arguments for the model        
+        """
+
         super(MultimodalEnricoModel, self).__init__()
 
         self.args = args
@@ -96,8 +102,18 @@ class MultimodalEnricoModel(pl.LightningModule):
         return self.model(x1, x2, label)
 
     def training_step(self, batch, batch_idx): 
+        """Training step for the model. Logs loss and accuracy.
 
-        # Extract static info, timeseries, and label from batch
+        Args:
+            batch (Tuple[torch.Tensor, torch.Tensor, torch.Tensor]): Tuple containing screenshot, wireframe, and label
+            batch_idx (int): Index of the batch
+
+        Returns:
+            torch.Tensor: Loss
+        
+        """
+
+        # Extract modality x1, modality x2, and label from batch
         x1, x2, label = batch
 
         # Get predictions and loss from model
@@ -118,8 +134,18 @@ class MultimodalEnricoModel(pl.LightningModule):
         return avg_loss
 
     def validation_step(self, batch, batch_idx): 
+        """Validation step for the model. Logs loss and accuracy.
 
-        # Extract static info, timeseries, and label from batch
+        Args:
+            batch (Tuple[torch.Tensor, torch.Tensor, torch.Tensor]): Tuple containing screenshot, wireframe, and label
+            batch_idx (int): Index of the batch
+
+        Returns:
+            torch.Tensor: Loss
+
+        """
+
+        # Extract modality x1, modality x2, and label from batch
         x1, x2, label = batch
 
         # Get predictions and loss from model
@@ -145,6 +171,11 @@ class MultimodalEnricoModel(pl.LightningModule):
         return avg_loss
 
     def on_validation_epoch_end(self) -> None:
+        """ Called at the end of the validation epoch. Logs average loss and accuracy.
+
+        Applies unimodal offset correction to logits and calculates accuracy for each modality and jointly
+
+        """
         avg_loss = torch.stack(self.val_metrics["val_loss"]).mean()
         avg_acc = torch.stack(self.val_metrics["val_acc"]).mean()
         x1_acc = torch.mean(torch.stack(self.val_metrics["val_x1_acc"]))
@@ -161,8 +192,18 @@ class MultimodalEnricoModel(pl.LightningModule):
         self.val_metrics["val_x2_acc"].clear()
 
     def test_step(self, batch, batch_idx):
+        """Test step for the model. Logs loss and accuracy.
 
-        # Extract static info, timeseries, and label from batch
+        Args:
+            batch (Tuple[torch.Tensor, torch.Tensor, torch.Tensor]): Tuple containing screenshot, wireframe, and label
+            batch_idx (int): Index of the batch
+
+        Returns:
+            torch.Tensor: Loss
+
+        """
+
+        # Extract modality x1, modality x2, and label from batch
         x1, x2, label = batch
 
         # Get predictions and loss from model
@@ -188,6 +229,11 @@ class MultimodalEnricoModel(pl.LightningModule):
         return avg_loss
     
     def on_test_epoch_end(self):
+        """ Called at the end of the test epoch. Logs average loss and accuracy.
+
+        Applies unimodal offset correction to logits and calculates accuracy for each modality and jointly
+
+        """
         avg_loss = torch.stack(self.test_metrics["test_loss"]).mean()
         avg_acc = torch.stack(self.test_metrics["test_acc"]).mean()
         x1_acc = torch.mean(torch.stack(self.test_metrics["test_x1_acc"]))

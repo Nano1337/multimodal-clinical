@@ -64,6 +64,16 @@ class FusionNet(nn.Module):
         self.loss_fn = loss_fn
 
     def forward(self, x1_data, x2_data, label):
+        """ Forward pass for the FusionNet model. Fuses at logit level.
+        
+        Args:
+            x1_data (torch.Tensor): Input data for modality 1
+            x2_data (torch.Tensor): Input data for modality 2
+            label (torch.Tensor): Ground truth label
+
+        Returns:
+            Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]: Tuple containing the logits for modality 1, modality 2, average logits, and loss
+        """
         x1_logits = self.x1_model(x1_data)
         x2_logits = self.x2_model(x2_data)
 
@@ -77,6 +87,13 @@ class FusionNet(nn.Module):
 class MultimodalEnricoModel(pl.LightningModule): 
 
     def __init__(self, args): 
+        """Initialize MultimodalEnricoModel.
+
+        Args: 
+            args (argparse.Namespace): Arguments for the model        
+        """
+
+
         super(MultimodalEnricoModel, self).__init__()
 
         self.args = args
@@ -103,12 +120,22 @@ class MultimodalEnricoModel(pl.LightningModule):
         return self.model(x1, x2, label)
 
     def training_step(self, batch, batch_idx): 
+        """Training step for the model. Logs loss and accuracy.
 
-        # Extract static info, timeseries, and label from batch
+        Args:
+            batch (Tuple[torch.Tensor, torch.Tensor, torch.Tensor]): Tuple containing screenshot, wireframe, and label
+            batch_idx (int): Index of the batch
+
+        Returns:
+            torch.Tensor: Loss
+        
+        """
+
+        # Extract modality x1, modality x2, and label from batch
         x1, x2, label = batch
 
         # Get predictions and loss from model
-        x1_logits, x2_logits, avg_logits, loss = self.model(x1, x2, label)
+        _, _, avg_logits, loss = self.model(x1, x2, label)
 
         # Calculate accuracy
         joint_acc = torch.mean((torch.argmax(avg_logits, dim=1) == label).float())
@@ -121,8 +148,18 @@ class MultimodalEnricoModel(pl.LightningModule):
         return loss
 
     def validation_step(self, batch, batch_idx): 
+        """Validation step for the model. Logs loss and accuracy.
 
-        # Extract static info, timeseries, and label from batch
+        Args:
+            batch (Tuple[torch.Tensor, torch.Tensor, torch.Tensor]): Tuple containing screenshot, wireframe, and label
+            batch_idx (int): Index of the batch
+
+        Returns:
+            torch.Tensor: Loss
+
+        """
+
+        # Extract modality x1, modality x2, and label from batch
         x1, x2, label = batch
 
         # Get predictions and loss from model
@@ -143,6 +180,11 @@ class MultimodalEnricoModel(pl.LightningModule):
         return loss
 
     def on_validation_epoch_end(self) -> None:
+        """ Called at the end of the validation epoch. Logs average loss and accuracy.
+
+        Applies unimodal offset correction to logits and calculates accuracy for each modality and jointly
+
+        """
         labels = torch.cat(self.val_metrics["val_labels"], dim=0) # (N)
         logits = torch.cat(self.val_metrics["val_logits"], dim=0) # (N, M, C)
         m_out = torch.mean(logits, dim=0)
@@ -169,8 +211,18 @@ class MultimodalEnricoModel(pl.LightningModule):
 
 
     def test_step(self, batch, batch_idx):
+        """Test step for the model. Logs loss and accuracy.
 
-        # Extract static info, timeseries, and label from batch
+        Args:
+            batch (Tuple[torch.Tensor, torch.Tensor, torch.Tensor]): Tuple containing screenshot, wireframe, and label
+            batch_idx (int): Index of the batch
+
+        Returns:
+            torch.Tensor: Loss
+
+        """
+
+        # Extract modality x1, modality x2, and label from batch
         x1, x2, label = batch 
 
         # Get predictions and loss from model
@@ -188,11 +240,15 @@ class MultimodalEnricoModel(pl.LightningModule):
         self.test_metrics["test_loss"].append(loss)
         self.test_metrics["test_acc"].append(joint_acc)
 
-
         # Return the loss
         return loss
     
     def on_test_epoch_end(self):
+        """ Called at the end of the test epoch. Logs average loss and accuracy.
+
+        Applies unimodal offset correction to logits and calculates accuracy for each modality and jointly
+
+        """
         labels = torch.cat(self.test_metrics["test_labels"], dim=0) # (N)
         logits = torch.cat(self.test_metrics["test_logits"], dim=0) # (N, M, C)
         m_out = torch.mean(logits, dim=0)
