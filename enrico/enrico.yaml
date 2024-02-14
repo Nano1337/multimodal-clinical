@@ -6,5 +6,8 @@ dropout_p: 0.1
 gpus: [0]
 data_path: "../data/enrico/"
 num_cpus: 2
+
+# main settings that need to be checked
+model_type: "ensemble"
 group_name: "enrico_cls20_ensemble_seeds"
 seed: 4

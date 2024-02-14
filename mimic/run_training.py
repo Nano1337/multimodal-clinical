@@ -12,17 +12,12 @@ from torch.utils.data import DataLoader
 
 # internal files
 from get_data import get_dataset
-# options: joint_model, ensemble_model, joint_model_proba
-from ensemble_model import *
 
 # set reproducible 
 import torch
 torch.backends.cudnn.deterministc = True
 torch.backends.cudnn.benchmark = False
 torch.set_float32_matmul_precision('medium')
-
-seed = 0
-seed_everything(seed, workers=True)
 
 DEFAULT_GPUS = [0]
 
@@ -40,6 +35,18 @@ if __name__ == "__main__":
         raise NotImplementedError
     for key, val in cfg.items():
         setattr(args, key, val)
+
+    seed_everything(args.seed, workers=True)
+
+    # model training type
+    if args.model_type == "jlogits":
+        from joint_model import *
+    elif args.model_type == "ensemble":
+        from ensemble_model import *
+    elif args.model_type == "jprobas":
+        from joint_model_proba import *
+    else: 
+        raise NotImplementedError("Model type not implemented")
 
     # datasets
     train_dataset, val_dataset, test_dataset = get_dataset(task=args.task_num, imputed_path=args.data_path) # -1 indicates mortality 6 class task
@@ -81,7 +88,7 @@ if __name__ == "__main__":
     # define trainer
     trainer = None
     wandb_logger = WandbLogger(
-        group="mimic_icdtask7_ensemble_seeds",
+        group=args.group_name,
         )
     if torch.cuda.is_available(): 
         # call pytorch lightning trainer 
@@ -92,7 +99,9 @@ if __name__ == "__main__":
             deterministic=True, 
             default_root_dir="ckpts/",  
             precision="bf16-mixed",
-            num_sanity_val_steps=0,
+            num_sanity_val_steps=0, # check validation 
+            log_every_n_steps=30,
+            
         )
     else: 
         raise NotImplementedError("It is not advised to train without a GPU")

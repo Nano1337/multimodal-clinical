@@ -99,9 +99,6 @@ class MultimodalEnricoModel(pl.LightningModule):
         self.args = args
         self.model = self._build_model()
 
-        self.train_logits_sum = None # should be dim (M, C)
-        self.total_samples = 0
-
         self.val_metrics = {
             "val_loss": [], 
             "val_acc": [],

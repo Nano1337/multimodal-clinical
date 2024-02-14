@@ -12,8 +12,7 @@ from torch.utils.data import DataLoader
 
 # internal files
 from get_data import get_data
-# options: joint_model, ensemble_model, joint_model_proba
-from ensemble_model import *
+
 
 # set reproducible 
 import torch
@@ -41,6 +40,16 @@ if __name__ == "__main__":
 
     seed_everything(args.seed, workers=True) 
 
+    # model training type
+    if args.model_type == "jlogits":
+        from joint_model import *
+    elif args.model_type == "ensemble":
+        from ensemble_model import *
+    elif args.model_type == "jprobas":
+        from joint_model_proba import *
+    else:   
+        raise NotImplementedError("Model type not implemented")
+
     """
     batch[0] is (B, 3, 256, 128) screenshot, modality x1
     batch[1] is (B, 3, 256, 128) wireframe, modality x2
@@ -48,7 +57,7 @@ if __name__ == "__main__":
     """
 
     # datasets
-    train_dataset, val_dataset, test_dataset, sampler = get_data(args.data_path) # -1 indicates mortality 6 class task
+    train_dataset, val_dataset, test_dataset, sampler = get_data(args.data_path)
 
     # get dataloaders
     train_loader = DataLoader(
