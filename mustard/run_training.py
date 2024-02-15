@@ -99,13 +99,8 @@ if __name__ == "__main__":
         collate_fn=_process_2
     )
 
-    batch = next(iter(train_loader))
-    print(batch[0].shape)
-
-    exit()
-
     # get model
-    model = MultimodalEnricoModel(args)
+    model = MultimodalMustardModel(args)
 
     # define trainer
     trainer = None
@@ -122,7 +117,7 @@ if __name__ == "__main__":
             default_root_dir="ckpts/",  
             precision="bf16-mixed",
             num_sanity_val_steps=0, # check validation 
-            log_every_n_steps=30,
+            log_every_n_steps=10,
         )
     else: 
         raise NotImplementedError("It is not advised to train without a GPU")

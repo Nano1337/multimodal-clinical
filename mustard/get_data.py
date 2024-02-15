@@ -227,7 +227,7 @@ class Affectdataset(Dataset):
             tmp_label = self.dataset['labels'][ind]
 
         label = torch.tensor(_get_class(tmp_label)).long() if self.task == "classification" else torch.tensor(
-            tmp_label).float()
+            tmp_label).float() #.unsqueeze(1)
 
         if self.flatten:
             return [vision.flatten(), audio.flatten(), text.flatten(), ind, \
