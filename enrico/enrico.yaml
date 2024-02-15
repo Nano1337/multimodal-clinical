@@ -8,6 +8,7 @@ data_path: "../data/enrico/"
 num_cpus: 2
 
 # main settings that need to be checked
+use_wandb: True
 model_type: "ensemble"
 group_name: "enrico_cls20_ensemble_seeds"
 seed: 4

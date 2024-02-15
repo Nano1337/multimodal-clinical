@@ -95,7 +95,7 @@ if __name__ == "__main__":
         trainer = pl.Trainer(
             strategy="auto",
             max_epochs=args.num_epochs, 
-            logger = wandb_logger,
+            logger = wandb_logger if args.use_wandb else None,
             deterministic=True, 
             default_root_dir="ckpts/",  
             precision="bf16-mixed",

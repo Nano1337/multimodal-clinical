@@ -9,6 +9,7 @@ num_cpus: 2
 task_num: 7 # -1 is mortality, all others are for ICD-9 task
 
 # main settings that need to be checked
+use_wandb: True
 model_type: "jprobas"
 group_name: "mimic_icdt7_jprobas_seeds"
 seed: 4
