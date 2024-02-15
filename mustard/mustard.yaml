@@ -2,12 +2,14 @@ num_classes: 20
 batch_size: 32
 learning_rate: 1.0e-4
 num_epochs: 30
+max_seq_len: 40
 dropout_p: 0.1
 gpus: [0]
-data_path: "../data/mustard/"
+data_path: "../data/mustard/sarcasm.pkl"
 num_cpus: 2
 
 # main settings that need to be checked
+use_wandb: False
 model_type: "ensemble"
 group_name: "mustard_cls20_ensemble_seeds"
 seed: 0

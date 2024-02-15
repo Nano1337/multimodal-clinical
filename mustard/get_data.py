@@ -247,23 +247,16 @@ class Affectdataset(Dataset):
         return self.dataset['vision'].shape[0]
 
 
-def get_dataset(
-        filepath: str, batch_size: int = 32, max_seq_len=50, max_pad=False, train_shuffle: bool = True,
-        num_workers: int = 2, flatten_time_series: bool = False, task=None, robust_test=False, data_type='sarcasm', 
-        raw_path='/home/van/backup/pack/mosi/mosi.hdf5', z_norm=False) -> DataLoader:
+def get_data(
+        filepath: str, max_seq_len=50, max_pad=False, flatten_time_series: bool = False, task=None, data_type='sarcasm', z_norm=False) -> DataLoader:
     """Get dataloaders for affect data.
     Args:
         filepath (str): Path to datafile
-        batch_size (int, optional): Batch size. Defaults to 32.
         max_seq_len (int, optional): Maximum sequence length. Defaults to 50.
         max_pad (bool, optional): Whether to pad data to max length or not. Defaults to False.
-        train_shuffle (bool, optional): Whether to shuffle training data or not. Defaults to True.
-        num_workers (int, optional): Number of workers. Defaults to 2.
         flatten_time_series (bool, optional): Whether to flatten time series data or not. Defaults to False.
         task (str, optional): Which task to load in. Defaults to None.
-        robust_test (bool, optional): Whether to apply robustness to data or not. Defaults to False.
-        data_type (str, optional): What data to load in. Defaults to 'mosi'.
-        raw_path (str, optional): Full path to data. Defaults to '/home/van/backup/pack/mosi/mosi.hdf5'.
+        data_type (str, optional): What data to load in. Defaults to 'sarcasm'. 
         z_norm (bool, optional): Whether to normalize data along the z dimension or not. Defaults to False.
     Returns:
         DataLoader: tuple of train dataloader, validation dataloader, test dataloader
@@ -284,17 +277,6 @@ def get_dataset(
     train_set = Affectdataset(processed_dataset['train'], flatten_time_series, task=task, max_pad=max_pad, max_pad_num=max_seq_len, data_type=data_type, z_norm=z_norm)
     val_set = Affectdataset(processed_dataset['valid'], flatten_time_series, task=task, max_pad=max_pad, max_pad_num=max_seq_len, data_type=data_type, z_norm=z_norm)
     test_set = Affectdataset(processed_dataset['test'], flatten_time_series, task=task, max_pad=max_pad, max_pad_num=max_seq_len, data_type=data_type, z_norm=z_norm)
-
-    # train = DataLoader(, 
-    #                    shuffle=train_shuffle, num_workers=num_workers, batch_size=batch_size, 
-    #                    collate_fn=process)
-    # valid = DataLoader(, 
-    #                    shuffle=False, num_workers=num_workers, batch_size=batch_size, 
-    #                    collate_fn=process)
-    # test = DataLoader(, \
-    #                 shuffle=False, num_workers=num_workers, batch_size=batch_size, \
-    #                 collate_fn=process)
-
 
     return train_set, val_set, test_set
 
@@ -366,20 +348,18 @@ if __name__ == '__main__':
     - label: binary classification (sarcasm or not)
     """
     max_pad = True
-    train_set, val_set, test_set = get_dataset('../data/mustard/sarcasm.pkl', robust_test=False, max_pad=True, task='classification', data_type='sarcasm', max_seq_len=40)
+    train_set, val_set, test_set = get_data('../data/mustard/sarcasm.pkl', max_pad=True, task='classification', data_type='sarcasm', max_seq_len=40)
 
     print(len(train_set), len(val_set), len(test_set))
 
     num_workers = 1
     batch_size = 4
 
-    process = eval("_process_2") if max_pad else eval("_process_1")
-
     train_loader = DataLoader(train_set, 
                     shuffle=True, num_workers=num_workers, batch_size=batch_size, 
-                    collate_fn=process
+                    collate_fn=_process_2
                     )
+
     batch = next(iter(train_loader))
     print(f'Image: {batch[0].shape}, Audio: {batch[1].shape}, Text: {batch[2].shape}, Label: {batch[3].shape}')
 
-    

@@ -11,7 +11,7 @@ from pytorch_lightning import seed_everything
 from torch.utils.data import DataLoader
 
 # internal files
-from get_data import get_data
+from get_data import get_data, _process_2
 
 # set reproducible 
 import torch
@@ -61,7 +61,13 @@ if __name__ == "__main__":
     """
 
     # datasets
-    train_dataset, val_dataset, test_dataset, sampler = get_data(args.data_path)
+    train_dataset, val_dataset, test_dataset = get_data(
+        args.data_path, 
+        max_pad=True, 
+        task='classification', 
+        data_type='sarcasm', 
+        max_seq_len=args.max_seq_len
+    )
 
     # get dataloaders
     train_loader = DataLoader(
@@ -70,7 +76,7 @@ if __name__ == "__main__":
         num_workers=args.num_cpus, 
         persistent_workers=True,
         prefetch_factor = 4,
-        sampler=sampler,
+        collate_fn=_process_2
     )
 
     val_loader = DataLoader(
@@ -79,6 +85,8 @@ if __name__ == "__main__":
         num_workers=args.num_cpus, 
         persistent_workers=True, 
         prefetch_factor=4,
+        shuffle=False, 
+        collate_fn=_process_2
     )
 
     test_loader = DataLoader(
@@ -87,7 +95,14 @@ if __name__ == "__main__":
         num_workers=args.num_cpus, 
         persistent_workers=True, 
         prefetch_factor=4,
+        shuffle=False,
+        collate_fn=_process_2
     )
+
+    batch = next(iter(train_loader))
+    print(batch[0].shape)
+
+    exit()
 
     # get model
     model = MultimodalEnricoModel(args)
@@ -102,13 +117,12 @@ if __name__ == "__main__":
         trainer = pl.Trainer(
             strategy="auto",
             max_epochs=args.num_epochs, 
-            logger = wandb_logger,
+            logger = wandb_logger if args.use_wandb else None,
             deterministic=True, 
             default_root_dir="ckpts/",  
             precision="bf16-mixed",
             num_sanity_val_steps=0, # check validation 
             log_every_n_steps=30,
-            
         )
     else: 
         raise NotImplementedError("It is not advised to train without a GPU")
