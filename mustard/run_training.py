@@ -115,7 +115,7 @@ if __name__ == "__main__":
             logger = wandb_logger if args.use_wandb else None,
             deterministic=True, 
             default_root_dir="ckpts/",  
-            precision="bf16-mixed",
+            precision="32",
             num_sanity_val_steps=0, # check validation 
             log_every_n_steps=10,
         )

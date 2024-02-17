@@ -1,0 +1,1 @@
+Don't benchmark on mustard yet. There seems to be some convergence issues with the GRU or LSTM implementations. 

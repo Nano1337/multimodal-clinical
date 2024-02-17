@@ -4,36 +4,42 @@ import torch.nn.functional as F
 
 import pytorch_lightning as pl
 from torchvision import models as tmodels
+                              
 
-class GRUNet(nn.Module):
-    def __init__(self, input_features, hidden_dim, num_layers, num_classes):
-        """ Initialize a simple GRU.
+class LstmClassifier(nn.Module):
+    def __init__(self, input_dim, num_classes):
+        super(LstmClassifier, self).__init__()
+        self.hidden_dim = 384
+
+        # Input projection to hidden_dim
+        self.fc1 = nn.Linear(input_dim, self.hidden_dim)
         
-        Args:
-            input_features (int): Input dimension
-            hidden_dim (int): Hidden dimension
-            num_layers (int): Number of layers
-            num_classes (int): Number of classes
-        """
-        super(GRUNet, self).__init__()
-        self.gru = nn.GRU(input_features, hidden_dim, num_layers, batch_first=True)
-        self.fc1 = nn.Linear(hidden_dim, 64)  
-        self.fc2 = nn.Linear(64, 32)        
-        self.fc3 = nn.Linear(32, num_classes)         
+        # LSTM model initialization
+        self.lstm = nn.LSTM(self.hidden_dim, self.hidden_dim, batch_first=True)
+
+        # Classifier
+        self.fc2 = nn.Linear(self.hidden_dim, 100)
+        self.fc3 = nn.Linear(100, num_classes)
 
     def forward(self, x):
-        """ Apply the forward pass of the GRU.
+        B, S, H = x.shape  # Batch size, Sequence length, Hidden size
 
-        Args:
-            x (torch.Tensor): Input tensor
+        # Use projection
+        x = x.view(-1, H)  # Flattening to apply linear layer (BS, H)
+        x = self.fc1(x)
+        x = x.view(B, S, -1)  # Reshape back to (B, S, Hidden_dim) for LSTM
 
-        Returns:
-            torch.Tensor: Output tensor
-        """
-        _, h = self.gru(x)  # We only need the hidden state
-        x = F.relu(self.fc1(h[-1]))  # Take the last layer's hidden state
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x) 
+        # Pass through LSTM
+        x, (hn, cn) = self.lstm(x)
+        # hn is of shape (num_layers * num_directions, batch, hidden_size)
+        # For simplicity, we take the last hidden state of the top layer
+        x = hn[-1, :, :]  # (B, Hidden_dim)
+
+        # Classifier
+        x = self.fc2(x)
+        x = F.relu(x)
+        x = self.fc3(x)
+
         return x
 
 class FusionNet(nn.Module):
@@ -43,9 +49,9 @@ class FusionNet(nn.Module):
             loss_fn
             ):
         super(FusionNet, self).__init__()
-        self.x1_model = GRUNet(371, 512, 1, num_classes)
-        self.x2_model = GRUNet(81, 256, 1, num_classes)
-        self.x3_model = GRUNet(300, 600, 1, num_classes)
+        self.x1_model = LstmClassifier(371, num_classes)
+        self.x2_model = LstmClassifier(81, num_classes)
+        self.x3_model = LstmClassifier(300, num_classes)
 
         self.num_classes = num_classes
         self.loss_fn = loss_fn
@@ -64,11 +70,11 @@ class FusionNet(nn.Module):
                                                                             modality 3, average logits, and loss
         """
         x1_logits = self.x1_model(x1_data)
-        x2_logits = self.x2_model(x2_data)
+        x2_logits = self.x2_model(x2_data) 
         x3_logits = self.x3_model(x3_data)
 
         # fuse at logit level
-        avg_logits = (x1_logits + x2_logits + x3_logits) / 2
+        avg_logits = (x1_logits + x2_logits + x3_logits) / 3
 
         label = label.flatten()
         loss = self.loss_fn(avg_logits, label)
