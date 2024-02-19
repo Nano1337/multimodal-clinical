@@ -39,35 +39,26 @@ if __name__ == "__main__":
 
     seed_everything(args.seed, workers=True) 
 
-    # model training type
-    if args.model_type == "jlogits":
-        from joint_model import *
-    elif args.model_type == "ensemble":
-        from ensemble_model import *
-    elif args.model_type == "jprobas":
-        from joint_model_proba import *
-    elif args.model_type == "ensemble_jprobas": 
-        from ensemble_model_probas import *
-    elif args.model_type == "jprobas_jlogits": 
-        from joint_model_proba_logits import *
-    else:   
-        raise NotImplementedError("Model type not implemented")
+    # # model training type
+    # if args.model_type == "jlogits":
+    #     from joint_model import *
+    # elif args.model_type == "ensemble":
+    #     from ensemble_model import *
+    # elif args.model_type == "jprobas":
+    #     from joint_model_proba import *
+    # else:   
+    #     raise NotImplementedError("Model type not implemented")
 
 
     """
     Batch tuple information: 
-    - S is max_seq_len, which is currently set to 40
-    - Batch: (image, audio, text, label)
-    - batch[0], image: (B, S, 371), modality x1
-    - batch[1], audio: (B, S, 81), modality x2
-    - batch[2], text: (B, S, 300), modality x3
-    - batch[3], label: binary classification (sarcasm or not)
+    batch["text"], batch["image"], batch["dialogue"], batch["label"]
     """
 
     # datasets
-    train_dataset, val_dataset, test_dataset = get_data(
-        args.data_path, 
-    )
+    train_dataset, val_dataset, test_dataset = get_data(args)
+    print(len(train_dataset))
+    exit()
 
     # get dataloaders
     train_loader = DataLoader(
@@ -76,6 +67,7 @@ if __name__ == "__main__":
         num_workers=args.num_cpus, 
         persistent_workers=True,
         prefetch_factor = 4,
+        collate_fn=_process_2
     )
 
     val_loader = DataLoader(
@@ -85,6 +77,7 @@ if __name__ == "__main__":
         persistent_workers=True, 
         prefetch_factor=4,
         shuffle=False, 
+        collate_fn=_process_2
     )
 
     test_loader = DataLoader(
@@ -94,10 +87,11 @@ if __name__ == "__main__":
         persistent_workers=True, 
         prefetch_factor=4,
         shuffle=False,
+        collate_fn=_process_2
     )
 
     # get model
-    model = MultimodalAVMnistModel(args)
+    model = MultimodalMustardModel(args)
 
     # define trainer
     trainer = None
@@ -112,7 +106,7 @@ if __name__ == "__main__":
             logger = wandb_logger if args.use_wandb else None,
             deterministic=True, 
             default_root_dir="ckpts/",  
-            precision="bf16-mixed",
+            precision="32",
             num_sanity_val_steps=0, # check validation 
             log_every_n_steps=10,
         )

@@ -1,6 +1,6 @@
 num_classes: 10
 batch_size: 32
-learning_rate: 2.0e-3
+learning_rate: 1.0e-3
 num_epochs: 50
 dropout_p: 0.1
 gpus: [0]
@@ -9,6 +9,6 @@ num_cpus: 2
 
 # main settings that need to be checked
 use_wandb: True 
-model_type: "jprobas"
-group_name: "avmnist_cls10_jprobas_lrdouble" # "avmnist_cls10_jlogits_seeds"
-seed: 1
+model_type: "jprobas_jlogits"
+group_name: "avmnist_cls10_probas_logits" # "avmnist_cls10_jlogits_seeds"
+seed: 0
