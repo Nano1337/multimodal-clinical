@@ -207,11 +207,11 @@ class MultimodalDataset(Dataset):
 
         # Save this dataframe into a pickle
         # Filename will look something like "train__text_image_dialogue__dataframe.pkl"
-        print(f"{self.dataset_type=}")
+        # print(f"{self.dataset_type=}")
         filename = "__".join([self.dataset_type, self.saved_dataframe_filename_prefix, "dataframe.pkl"])
         save_path = os.path.join(self.dir_to_save_dataframe, filename)
         df.to_pickle(save_path)
-        print("Preprocessed dataframe saved to {}".format(save_path))
+        # print("Preprocessed dataframe saved to {}".format(save_path))
 
         return df
 
@@ -231,7 +231,7 @@ class MultimodalDataset(Dataset):
             failed_ids = []
             for iteration, text_id in enumerate(self.text_ids):
                 if (iteration % 250 == 0):
-                    print("Generating summaries for item {}...".format(iteration))
+                    # print("Generating summaries for item {}...".format(iteration))
                     # Save progress so far
                     self.data_frame.to_pickle(save_path)
 
@@ -264,7 +264,7 @@ class MultimodalDataset(Dataset):
 
             # Save final dialogue dataframe
             self.data_frame.to_pickle(save_path)
-            print("Preprocessed dialogue dataframe saved to {}".format(save_path))
+            # print("Preprocessed dialogue dataframe saved to {}".format(save_path))
 
         if from_saved_df_path != "":
             # Special Case (see above comment in __init__)
@@ -275,8 +275,6 @@ class MultimodalDataset(Dataset):
 
             def text_exists(row):
                 """ Ensures that a comment's corresponding text exists """
-                print("Text ids exist bruh:", self.text_ids)
-                exit()
                 if row['submission_id'] in self.text_ids:
                     return True
                 else:

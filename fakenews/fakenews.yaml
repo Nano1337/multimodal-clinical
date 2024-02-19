@@ -23,7 +23,7 @@ dir_to_save_dataframe: "../data/fakenews/"
 preprocessed_train_dataframe_path: "../data/fakenews/train__text_image_dialogue_dataframe.pkl"
 preprocessed_val_dataframe_path: "../data/fakenews/val__text_image_dialogue_dataframe.pkl"
 preprocessed_test_dataframe_path: "../data/fakenews/test__text_image_dialogue_dataframe.pkl"
-from_dialogue_dataframe: True
+from_dialogue_dataframe: False
 
 # main settings that need to be checked
 use_wandb: True
