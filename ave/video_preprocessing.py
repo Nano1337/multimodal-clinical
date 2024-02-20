@@ -94,7 +94,7 @@ class videoReader(object):
                         cv2.imencode('.jpg', image)[1].tofile(save_name)
                         count += 1
 
-def video2frame_update_SE(self, frame_save_path, min_save_frame=3, start_t=0, end_t=10):
+    def video2frame_update_SE(self, frame_save_path, min_save_frame=3, start_t=0, end_t=10):
         """Extracts frames from a specified segment of the video and ensures a minimum number of frames
         are saved, based on the frame rate.
 
@@ -142,7 +142,14 @@ def video2frame_update_SE(self, frame_save_path, min_save_frame=3, start_t=0, en
                         count += 1
             else:
                 while count < add_count:
-                    frame_id = np.random.randint(start_t*self.fps, end_t*self.fps)
+                    # FIXME: debugging why one video has a start and end time of 0? 
+                    try: 
+                        frame_id = np.random.randint(start_t*self.fps, end_t*self.fps)
+                    except: 
+                        print(f"start_t: {start_t}, end_t: {end_t}, fps: {self.fps}")
+                        print(f"Range start: {start_t*self.fps}, Range end: {end_t*self.fps}")
+                        exit()
+
                     save_name = '{0}/{1:05d}.jpg'.format(self.frame_save_path, frame_id)
                     if not os.path.exists(save_name):
                         self.vid.set(cv2.CAP_PROP_POS_FRAMES, frame_id)
@@ -179,9 +186,9 @@ class AVE_dataset(object):
             self.file_list = f.readlines()
 
     def extractImage(self):
-    """Processes each video in the dataset to extract images based on the specified frame rate and saves them."""
+        """Processes each video in the dataset to extract images based on the specified frame rate and saves them."""
         for each_video in self.file_list[1:]:
-            print('Precessing {} ...'.format(each_video))
+            print('Processing {} ...'.format(each_video))
             each_video = each_video.split('&')
             video_dir = os.path.join(self.path_to_video, each_video[1]+'.mp4')
             self.videoReader = videoReader(video_path=video_dir, frame_kept_per_second=self.frame_kept_per_second)
@@ -195,7 +202,7 @@ class AVE_dataset(object):
         """Processes each video in the dataset to extract images from specified start and end times and ensures a minimum number of frames are saved."""
 
         for each_video in self.file_list[1:]:
-            print('Precessing {} ...'.format(each_video))
+            print('Processing {} ...'.format(each_video))
             each_video = each_video.split('&')
             start_t = int(each_video[3])
             end_t = int(each_video[4])
@@ -214,7 +221,7 @@ class AVE_dataset(object):
     def extractWav(self):
         """Processes each audio file in the dataset to extract waveforms, resamples them, and computes the spectrogram."""
         for each_audio in self.file_list[1:]:
-            print('Precessing {} ...'.format(each_audio))
+            print('Processing {} ...'.format(each_audio))
             each_audio = each_audio.split('&')
             audio_dir = os.path.join(self.path_to_audio, each_audio[1] + '.wav')
 
@@ -237,7 +244,7 @@ class AVE_dataset(object):
     def extractWav_SE(self):
         """Processes each audio file in the dataset similar to extractWav but considers specified start and end times for the audio segment."""
         for each_audio in self.file_list[1:]:
-            print('Precessing {} ...'.format(each_audio))
+            print('Processing {} ...'.format(each_audio))
             each_audio = each_audio.split('&')
             start_t = int(each_audio[3])
             end_t = int(each_audio[4])
@@ -270,4 +277,4 @@ class AVE_dataset(object):
 
 cramed = AVE_dataset()
 cramed.extractImage_SE()
-# cramed.extractWav_SE()
+cramed.extractWav_SE()
