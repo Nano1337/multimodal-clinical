@@ -11,7 +11,7 @@ from pytorch_lightning import seed_everything
 from torch.utils.data import DataLoader
 
 # internal files
-from get_data import get_data
+from get_data import get_data, make_balanced_sampler
 
 # set reproducible 
 import torch
@@ -59,6 +59,7 @@ if __name__ == "__main__":
     train_dataset, val_dataset, test_dataset = get_data(args)
 
     # get dataloaders
+    train_sampler = make_balanced_sampler(train_dataset.label)
     train_loader = DataLoader(
         train_dataset,
         batch_size=args.batch_size,
@@ -66,24 +67,28 @@ if __name__ == "__main__":
         persistent_workers=True,
         prefetch_factor = 4,
         collate_fn=train_dataset.custom_collate,
+        sampler=train_sampler,
     )
 
+    val_sampler = make_balanced_sampler(val_dataset.label)
     val_loader = DataLoader(
         val_dataset, 
         batch_size=args.batch_size, 
         num_workers=args.num_cpus, 
         persistent_workers=True, 
         prefetch_factor=4,
-        collate_fn=val_dataset.custom_collate
+        collate_fn=train_dataset.custom_collate, 
+        sampler=val_sampler,
     )
 
+    test_sampler = make_balanced_sampler(test_dataset.label)
     test_loader = DataLoader(
         test_dataset, 
         batch_size=args.batch_size, 
         num_workers=args.num_cpus, 
         persistent_workers=True, 
         prefetch_factor=4,
-        collate_fn=test_dataset.custom_collate
+        collate_fn=train_dataset.custom_collate
     )
 
     # get model
@@ -91,6 +96,7 @@ if __name__ == "__main__":
 
     # define trainer
     trainer = None
+    lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval='epoch')
     wandb_logger = WandbLogger(
         group=args.group_name,
         )
@@ -102,10 +108,12 @@ if __name__ == "__main__":
             logger = wandb_logger if args.use_wandb else None,
             deterministic=True, 
             default_root_dir="ckpts/",  
-            precision="bf16-mixed",
+            precision="bf16-mixed", # "bf16-mixed",
             num_sanity_val_steps=0, # check validation 
-            log_every_n_steps=30,
-            
+            log_every_n_steps=30,  
+            callbacks=[pl.callbacks.LearningRateMonitor(logging_interval='epoch')],
+
+            # overfit_batches=1,
         )
     else: 
         raise NotImplementedError("It is not advised to train without a GPU")

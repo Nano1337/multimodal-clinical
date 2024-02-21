@@ -7,7 +7,7 @@ import numpy as np
 from scipy import signal
 import torch
 from PIL import Image
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 from torch.utils.data.dataloader import default_collate
 from torchvision import transforms
 import argparse
@@ -70,18 +70,6 @@ class AVEDataset(Dataset):
 
     def __getitem__(self, idx):
 
-        # # audio
-        # samples, rate = librosa.load(self.audio[idx], sr=22050)
-        # resamples = np.tile(samples, 3)[:22050*3]
-        # resamples[resamples > 1.] = 1.
-        # resamples[resamples < -1.] = -1.
-        #
-        # spectrogram = librosa.stft(resamples, n_fft=512, hop_length=353)
-        # spectrogram = np.log(np.abs(spectrogram) + 1e-7)
-        # #mean = np.mean(spectrogram)
-        # #std = np.std(spectrogram)
-        # #spectrogram = np.divide(spectrogram - mean, std + 1e-9)
-
         spectrogram = pickle.load(open(self.audio[idx], 'rb'))
 
         if self.mode == 'train':
@@ -125,6 +113,13 @@ class AVEDataset(Dataset):
 
         return batch
 
+def make_balanced_sampler(labels):
+    class_counts = torch.bincount(torch.tensor(labels))
+    class_weights = 1. / class_counts
+    sample_weights = class_weights[labels]
+    sampler = WeightedRandomSampler(sample_weights, len(labels), replacement=True)
+    return sampler
+
 def get_data(args): 
 
     train_set = AVEDataset(args, mode='train')
@@ -141,11 +136,15 @@ if __name__ == "__main__":
     
     train_set, val_set, test_set = get_data(args)
 
+    train_sampler = make_balanced_sampler(train_set.label)
+
     train_loader = DataLoader(
         train_set, 
-        batch_size=4, 
-        collate_fn=train_set.custom_collate
+        batch_size=16, 
+        collate_fn=train_set.custom_collate, 
+        sampler=train_sampler
     )
 
     batch = next(iter(train_loader))
     print(f'x1: {batch[0].shape}, x2: {batch[1].shape}, label: {batch[2].shape}')
+    print(batch[2])

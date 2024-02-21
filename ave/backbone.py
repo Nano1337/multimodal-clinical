@@ -196,11 +196,11 @@ class ResNet(nn.Module):
             # print('recover: ', x.shape)
         if self.compress and self.modality == 'audio':  # 33 x 38
             # x = x.reshape(x.shape)
-            print(x.shape)
+            # print(x.shape)
             x = self.compress_layer(x)
-            print('audio compress:', x.shape)
+            # print('audio compress:', x.shape)
             x = self.recover_layer(x)
-            print('audio recover: ', x.shape)
+            # print('audio recover: ', x.shape)
 
         x = self.layer3(x)
         x = self.layer4(x)

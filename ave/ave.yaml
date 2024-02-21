@@ -1,16 +1,15 @@
 num_classes: 28
-batch_size: 1
+batch_size: 64
 learning_rate: 1.0e-3 # paper starts here and decays to 1e-4
 num_epochs: 50
 dropout_p: 0.1
 gpus: [0]
 data_path: "../data/ave/"
-num_cpus: 2
+num_cpus: 12
 
 # main settings that need to be checked
-use_wandb: False
-model_type: "jlogits"
-group_name: "ave_cls10_jlogits_seeds"
-seed: 0
-
-# use SGD with momentum 0.9 and weight decay 1e-4
+use_wandb: True 
+model_type: "ensemble"
+group_name: "test_ave" # "ave_cls10_jlogits_seeds" 
+seed: 5
+use_scheduler: True 
