@@ -10,7 +10,44 @@ from PIL import Image
 from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 from torch.utils.data.dataloader import default_collate
 from torchvision import transforms
+import torchaudio.transforms as T
+import torchaudio
 import argparse
+
+def apply_spec_augment(spectrogram, freq_mask_param=30, time_mask_param=120, num_freq_masks=2, num_time_masks=3):
+    """
+    Apply SpecAugment (frequency and time masking) to a given spectrogram.
+    
+    Parameters:
+    - spectrogram: Tensor, the input spectrogram of shape [channels, freq, time].
+    - freq_mask_param: int, the maximum width of the frequency masks.
+    - time_mask_param: int, the maximum length of the time masks.
+    - num_freq_masks: int, the number of frequency masks to apply.
+    - num_time_masks: int, the number of time masks to apply.
+
+    Returns:
+    - Tensor, the augmented spectrogram.
+    """
+    # Ensure spectrogram is a PyTorch tensor
+    if isinstance(spectrogram, np.ndarray):
+        spectrogram = torch.from_numpy(spectrogram)
+
+    # Ensure the spectrogram is floating point, as required by torchaudio transforms
+    if spectrogram.dtype != torch.float32:
+        spectrogram = spectrogram.to(torch.float32)
+
+    # Apply frequency masking
+    freq_mask = torchaudio.transforms.FrequencyMasking(freq_mask_param)
+    for _ in range(num_freq_masks):
+        spectrogram = freq_mask(spectrogram)
+
+    # Apply time masking
+    time_mask = torchaudio.transforms.TimeMasking(time_mask_param)
+    for _ in range(num_time_masks):
+        spectrogram = time_mask(spectrogram)
+
+    return spectrogram
+
 
 class AVEDataset(Dataset):
 
@@ -73,33 +110,49 @@ class AVEDataset(Dataset):
         spectrogram = pickle.load(open(self.audio[idx], 'rb'))
 
         if self.mode == 'train':
-            transform = transforms.Compose([
+            visual_transform = transforms.Compose([
                 transforms.RandomResizedCrop(224),
                 transforms.RandomHorizontalFlip(),
+                # transforms.RandomPerspective(distortion_scale=0.5, p=0.5),
+                # transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
                 transforms.ToTensor(),
+                # transforms.RandomErasing(p=0.5, scale=(0.02, 0.33), ratio=(0.3, 3.3), value=0, inplace=False), # operates on tensor
                 transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
             ])
         else:
-            transform = transforms.Compose([
+            visual_transform = transforms.Compose([
                 transforms.Resize(size=(224, 224)),
                 transforms.ToTensor(),
                 transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
             ])
-
+    
         # Visual
         image_samples = os.listdir(self.image[idx])
         # select_index = np.random.choice(len(image_samples), size=self.args.num_frame, replace=False)
         # select_index.sort()
 
-        num_frame = 4 # according to PMR paper: https://arxiv.org/pdf/2211.07089.pdf
+        # NOTE: num_frames setting here
+        num_frame = 6 # according to PMR paper: https://arxiv.org/pdf/2211.07089.pdf
+
+
         images = torch.zeros((num_frame, 3, 224, 224))
         for i in range(num_frame):
             # for i, n in enumerate(select_index):
             img = Image.open(os.path.join(self.image[idx], image_samples[i])).convert('RGB')
-            img = transform(img)
+            img = visual_transform(img)
             images[i] = img
 
         images = torch.permute(images, (1,0,2,3))
+
+        # Audio
+        if self.mode == 'train':
+            spectrogram = apply_spec_augment(
+                spectrogram, 
+                freq_mask_param=15,  # Reduced from 30 to make frequency masking less extensive
+                time_mask_param=60,  # Reduced from 120 to make time masking less extensive
+                num_freq_masks=1,    # Applying only 1 frequency mask instead of 2
+                num_time_masks=1     # Applying only 1 time mask instead of 3
+            )
 
         # label
         label = self.label[idx]

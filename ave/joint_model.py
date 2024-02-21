@@ -8,6 +8,9 @@ from torchvision import models as tmodels
 from backbone import resnet18
 
 
+from torch.optim.lr_scheduler import StepLR
+
+
 class FusionNet(nn.Module):
     def __init__(
             self, 
@@ -246,6 +249,14 @@ class MultimodalAveModel(pl.LightningModule):
     # Required for pl.LightningModule
     def configure_optimizers(self):
         optimizer = torch.optim.SGD(self.parameters(), lr=self.args.learning_rate, momentum=0.9, weight_decay=1.0e-4)
+        if self.args.use_scheduler:
+            scheduler = {
+                'scheduler': StepLR(optimizer, step_size=10, gamma=0.5),
+                'interval': 'epoch',
+                'frequency': 1,
+            }
+            return [optimizer], [scheduler]
+            
         return optimizer
 
     def _build_model(self):
