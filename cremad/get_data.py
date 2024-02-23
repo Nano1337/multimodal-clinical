@@ -99,7 +99,7 @@ class CremadDataset(Dataset):
                 # transforms.RandomPerspective(distortion_scale=0.5, p=0.5),
                 # transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
                 transforms.ToTensor(),
-                # transforms.RandomErasing(p=0.5, scale=(0.02, 0.33), ratio=(0.3, 3.3), value=0, inplace=False), # operates on tensor
+                transforms.RandomErasing(p=0.5, scale=(0.02, 0.33), ratio=(0.3, 3.3), value=0, inplace=False), # operates on tensor
                 transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
             ])
         else:
@@ -131,10 +131,10 @@ class CremadDataset(Dataset):
         if self.mode == 'train':
             spectrogram = apply_spec_augment(
                 spectrogram, 
-                freq_mask_param=15,  # Reduced from 30 to make frequency masking less extensive
-                time_mask_param=60,  # Reduced from 120 to make time masking less extensive
-                num_freq_masks=1,    # Applying only 1 frequency mask instead of 2
-                num_time_masks=1     # Applying only 1 time mask instead of 3
+                freq_mask_param=30,  # Reduced from 30 to make frequency masking less extensive
+                time_mask_param=120,  # Reduced from 120 to make time masking less extensive
+                num_freq_masks=2,    # Applying only 1 frequency mask instead of 2
+                num_time_masks=3     # Applying only 1 time mask instead of 3
             )
 
         # label
