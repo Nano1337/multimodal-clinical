@@ -1,4 +1,5 @@
 import pandas as pd
+import warnings
 import os
 from PIL import Image
 import torch
@@ -13,7 +14,17 @@ import argparse
 max_length = 512  # Adjust based on your specific needs
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')  # Adjust model as needed
 
-class TextImageDataset(Dataset):
+"""
+How to extract CLS token: 
+tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+model = BertForTokenClassification.from_pretrained('bert-base-uncased')
+inputs = tokenizer("Hello, my dog is cute", return_tensors='pt')
+outputs = model(**inputs, output_hidden_states=True)
+last_hidden_states = outputs.hidden_states[-1]
+cls_token = last_hidden_states[:, 0, :]
+"""
+
+class MultimodalFoodDataset(Dataset):
     def __init__(self, args, mode="train"):
         """
         Args:
@@ -50,7 +61,8 @@ class TextImageDataset(Dataset):
         text = self.data_frame.iloc[idx, 1]
         text = preprocess_text(text)
 
-        label = self.data_frame.iloc[idx, 'encoded_food']  # Use encoded label
+        # Corrected line
+        label = self.data_frame['encoded_food'].iloc[idx]  # Use encoded label
 
         return image, text, label
 
@@ -73,8 +85,15 @@ def custom_collate_fn(batch):
     images = torch.stack(images, dim=0)
     encoded_texts = tokenizer(list(texts), padding=True, truncation=True, max_length=max_length, return_tensors="pt")
     labels = torch.tensor(labels, dtype=torch.long)  # Ensure labels are torch.long
-    return images, encoded_texts, {'labels': labels}
 
+    return images, encoded_texts, labels
+
+def get_data(args): 
+    train_set = MultimodalFoodDataset(args, mode="train")
+    test_set = MultimodalFoodDataset(args, mode="test")
+    val_set = test_set
+
+    return train_set, val_set, test_set
 
 # Example usage
 if __name__ == "__main__":
@@ -84,12 +103,14 @@ if __name__ == "__main__":
     setattr(args, 'data_path', dirpath)
 
     # Load dataset
-    dataset = TextImageDataset(args, mode="train")
+    dataset = MultimodalFoodDataset(args, mode="train")
     dataloader = DataLoader(dataset, batch_size=4, collate_fn=custom_collate_fn)
 
     batch = next(iter(dataloader))
 
-    print(f'x1: {batch[0].shape}, x2: {batch[1].shape}, label: {batch[2].shape}')
+    print("x1", batch[0].shape)
+    print("x2", batch[1]['input_ids'].shape)
+    print("labels", batch[2].shape)
 
     # for images, texts, labels in dataloader:
     #     print(images.shape, texts['input_ids'].shape, labels.shape)
