@@ -10,6 +10,6 @@ num_cpus: 12
 # main settings that need to be checked
 use_wandb: True
 model_type: "jlogits"
-group_name: "cremad_cls6_jlogits_seeds" # cremad_cls28_ensemble_seeds
+group_name: "cremad_cls6_jlogits_aug" # cremad_cls28_ensemble_seeds
 seed: 5
 use_scheduler: True 

@@ -3,7 +3,7 @@ import warnings
 import os
 from PIL import Image
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler
 from torchvision import transforms
 from transformers import BertTokenizer
 from sklearn.preprocessing import LabelEncoder
@@ -13,16 +13,6 @@ import argparse
 # Constants
 max_length = 512  # Adjust based on your specific needs
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')  # Adjust model as needed
-
-"""
-How to extract CLS token: 
-tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
-model = BertForTokenClassification.from_pretrained('bert-base-uncased')
-inputs = tokenizer("Hello, my dog is cute", return_tensors='pt')
-outputs = model(**inputs, output_hidden_states=True)
-last_hidden_states = outputs.hidden_states[-1]
-cls_token = last_hidden_states[:, 0, :]
-"""
 
 class MultimodalFoodDataset(Dataset):
     def __init__(self, args, mode="train"):
@@ -36,11 +26,23 @@ class MultimodalFoodDataset(Dataset):
         self.csv_file = os.path.join(args.data_path, f"texts/{mode}_titles.csv")
         self.data_frame = pd.read_csv(self.csv_file, names=['image_path', 'text', 'food'], header=None)
 
-        # Label encoding
+        # label -> long encoding
         self.label_encoder = LabelEncoder()
         self.data_frame['encoded_food'] = self.label_encoder.fit_transform(self.data_frame['food'])
+        self.labels = self.data_frame['encoded_food'].tolist()
 
-        self.transform = transforms.Compose([
+        self.train_transform = transforms.Compose([
+            transforms.Resize((224, 224)),
+            
+            transforms.RandomHorizontalFlip(),  # Randomly flip the image horizontally
+            # transforms.RandomRotation(10),  # Randomly rotate the image by +/- 10 degrees
+            # transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),  # Randomly translate the image
+            # transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),  # Randomly alter the brightness, contrast, saturation, and hue
+            # transforms.RandomResizedCrop(224, scale=(0.8, 1.0), ratio=(0.75, 1.33)),  # Randomly crop the image then resize it back to the given size
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ])
+        self.test_transform = transforms.Compose([
             transforms.Resize((224, 224)),
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
@@ -56,7 +58,10 @@ class MultimodalFoodDataset(Dataset):
         image_name = self.data_frame.iloc[idx, 0]
         image_path = os.path.join(self.image_dir, self.mode, extract_class_name(image_name), image_name)
         image = Image.open(image_path).convert('RGB')  # Ensure image is RGB
-        image = self.transform(image)
+        if self.mode == "train": 
+            image = self.train_transform(image)
+        else: 
+            image = self.test_transform(image)
             
         text = self.data_frame.iloc[idx, 1]
         text = preprocess_text(text)
@@ -66,10 +71,19 @@ class MultimodalFoodDataset(Dataset):
 
         return image, text, label
 
+    def balanced_sampler(self):
+        class_counts = torch.bincount(torch.tensor(self.labels))
+        class_weights = 1. / class_counts
+        sample_weights = class_weights[self.labels]
+        sampler = WeightedRandomSampler(sample_weights, len(self.labels), replacement=True)
+        return sampler  
+
 def extract_class_name(filename): 
     parts = filename.split("_")
     class_label_parts = parts[:-1]
     return '_'.join(class_label_parts)
+
+
 
 def preprocess_text(text):
     """Preprocesses the text as per BERT requirements"""
@@ -104,14 +118,11 @@ if __name__ == "__main__":
 
     # Load dataset
     dataset = MultimodalFoodDataset(args, mode="train")
-    dataloader = DataLoader(dataset, batch_size=4, collate_fn=custom_collate_fn)
+    dataloader = DataLoader(dataset, batch_size=4, collate_fn=custom_collate_fn, sampler=dataset.balanced_sampler())
 
     batch = next(iter(dataloader))
 
     print("x1", batch[0].shape)
     print("x2", batch[1]['input_ids'].shape)
     print("labels", batch[2].shape)
-
-    # for images, texts, labels in dataloader:
-    #     print(images.shape, texts['input_ids'].shape, labels.shape)
-    #     # This prints the shapes of images, tokenized text input IDs, and labels for each batch
+    print(f'Labels: {batch[2]}')

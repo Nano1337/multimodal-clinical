@@ -11,7 +11,7 @@ from pytorch_lightning import seed_everything
 from torch.utils.data import DataLoader
 
 # internal files
-from get_data import get_data, make_balanced_sampler
+from get_data import get_data, custom_collate_fn
 
 # set reproducible 
 import torch
@@ -50,49 +50,47 @@ if __name__ == "__main__":
         raise NotImplementedError("Model type not implemented")
 
     """
-    batch[0] is (B, 257, 1004) audio spectrogram, modality x1
-    batch[1] is (B, 3, 3, 224, 224) sample of 3 images from a video, modality x2
-    batch[2] is [B] labels, 6 sentiment classes
+    batch[0] is (B, 3, 224, 224) image, modality x1
+    batch[1] is (B, S) text, modality x2
+    batch[2] is [B] labels, 101 food classes
     """
 
     # datasets
     train_dataset, val_dataset, test_dataset = get_data(args)
 
     # get dataloaders
-    train_sampler = make_balanced_sampler(train_dataset.label)
     train_loader = DataLoader(
         train_dataset,
         batch_size=args.batch_size,
         num_workers=args.num_cpus, 
         persistent_workers=True,
         prefetch_factor = 4,
-        collate_fn=train_dataset.custom_collate,
-        sampler=train_sampler,
+        collate_fn=custom_collate_fn,
+        sampler=train_dataset.balanced_sampler(),
     )
 
-    val_sampler = make_balanced_sampler(val_dataset.label)
     val_loader = DataLoader(
         val_dataset, 
         batch_size=args.batch_size, 
         num_workers=args.num_cpus, 
         persistent_workers=True, 
         prefetch_factor=4,
-        collate_fn=train_dataset.custom_collate, 
-        sampler=val_sampler,
+        collate_fn=custom_collate_fn, 
+        sampler=val_dataset.balanced_sampler(),
     )
 
-    test_sampler = make_balanced_sampler(test_dataset.label)
     test_loader = DataLoader(
         test_dataset, 
         batch_size=args.batch_size, 
         num_workers=args.num_cpus, 
         persistent_workers=True, 
         prefetch_factor=4,
-        collate_fn=train_dataset.custom_collate
+        collate_fn=custom_collate_fn, 
+        sampler=test_dataset.balanced_sampler()
     )
 
     # get model
-    model = MultimodalCremadModel(args)
+    model = MultimodalFoodModel(args)
 
     # define trainer
     trainer = None
@@ -112,7 +110,6 @@ if __name__ == "__main__":
             num_sanity_val_steps=0, # check validation 
             log_every_n_steps=30,  
             callbacks=[pl.callbacks.LearningRateMonitor(logging_interval='epoch')],
-
             # overfit_batches=1,
         )
     else: 
