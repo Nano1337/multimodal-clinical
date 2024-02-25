@@ -46,6 +46,8 @@ if __name__ == "__main__":
         from ensemble_model import *
     elif args.model_type == "jprobas":
         from joint_model_proba import *
+    elif args.model_type == "jprobas_jlogits": 
+        from joint_model_proba_logits import *
     else:   
         raise NotImplementedError("Model type not implemented")
 

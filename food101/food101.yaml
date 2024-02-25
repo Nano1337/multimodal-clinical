@@ -9,7 +9,7 @@ num_cpus: 12
 
 # main settings that need to be checked
 use_wandb: True
-model_type: "jprobas"
-group_name: "food101_cls101_jprobas_seeds" # cremad_cls28_ensemble_seeds
+model_type: "jprobas_jlogits"
+group_name: "food101_cls101_jprobas_jlogits_seeds" # cremad_cls28_ensemble_seeds
 seed: 5
 use_scheduler: True
