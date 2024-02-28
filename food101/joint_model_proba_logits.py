@@ -5,6 +5,7 @@ import torch.nn.functional as F
 import pytorch_lightning as pl
 from torchvision import models as tmodels
 
+
 from torch.optim.lr_scheduler import StepLR
 from transformers import BertForTokenClassification
 
@@ -60,11 +61,9 @@ class FusionNet(nn.Module):
             Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]: Tuple containing the logits for modality 1, modality 2, average logits, and loss
         """
 
-        x1_logits = self.x1_model(x1_data)
-        x2_logits = self.x2_model(x2_data)
-
-        if istrain: 
-
+        if istrain:
+            x1_logits = self.x1_model(x1_data)
+            x2_logits = self.x2_model(x2_data)
             x1_probs = self.softmax(x1_logits)
             x2_probs = self.softmax(x2_logits)
 
@@ -77,17 +76,16 @@ class FusionNet(nn.Module):
             loss = self.loss_fn(avg_logprobs, label)
 
             return (x1_logprobs, x2_logprobs, avg_logprobs, loss)
-        
         else: 
-            # fuse at logit level
+            x1_logits = self.x1_model(x1_data)
+            x2_logits = self.x2_model(x2_data)
 
+            # fuse at logit level
             avg_logits = (x1_logits + x2_logits) / 2
 
             loss = self.loss_fn(avg_logits, label)
 
             return (x1_logits, x2_logits, avg_logits, loss)
-
-
 
 class MultimodalFoodModel(pl.LightningModule): 
 
@@ -121,7 +119,7 @@ class MultimodalFoodModel(pl.LightningModule):
 
     def forward(self, x1, x2, label): 
         return self.model(x1, x2, label)
-    
+
     def training_step(self, batch, batch_idx): 
         """Training step for the model. Logs loss and accuracy.
 
@@ -137,7 +135,7 @@ class MultimodalFoodModel(pl.LightningModule):
         x1, x2, label = batch
 
         # Get predictions and loss from model
-        _, _, avg_logprobs, loss = self.model(x1, x2, label, istrain=True)
+        _, _, avg_logprobs, loss = self.model(x1, x2, label)
 
         # Calculate accuracy
         joint_acc = torch.mean((torch.argmax(avg_logprobs, dim=1) == label).float())
@@ -165,7 +163,7 @@ class MultimodalFoodModel(pl.LightningModule):
         x1, x2, label = batch
 
         # Get predictions and loss from model
-        x1_logits, x2_logits, avg_logits, loss = self.model(x1, x2, label, istrain=False)
+        x1_logits, x2_logits, avg_logits, loss = self.model(x1, x2, label)
 
         # Calculate accuracy
         joint_acc = torch.mean((torch.argmax(avg_logits, dim=1) == label).float())
@@ -178,7 +176,7 @@ class MultimodalFoodModel(pl.LightningModule):
         self.val_metrics["val_labels"].append(label)
         self.val_metrics["val_loss"].append(loss)
         self.val_metrics["val_acc"].append(joint_acc)
- 
+
         return loss
 
     def on_validation_epoch_end(self) -> None:
@@ -228,7 +226,7 @@ class MultimodalFoodModel(pl.LightningModule):
         x1, x2, label = batch 
 
         # Get predictions and loss from model
-        x1_logits, x2_logits, avg_logits, loss = self.model(x1, x2, label, istrain=False)
+        x1_logits, x2_logits, avg_logits, loss = self.model(x1, x2, label)
 
         # Calculate accuracy
         joint_acc = torch.mean((torch.argmax(avg_logits, dim=1) == label).float())
@@ -277,7 +275,15 @@ class MultimodalFoodModel(pl.LightningModule):
 
     # Required for pl.LightningModule
     def configure_optimizers(self):
-        optimizer = torch.optim.SGD(self.parameters(), lr=self.args.learning_rate)
+        optimizer = torch.optim.SGD(self.parameters(), lr=self.args.learning_rate, momentum=0.9, weight_decay=1.0e-4)
+        if self.args.use_scheduler:
+            scheduler = {
+                'scheduler': StepLR(optimizer, step_size=500, gamma=0.75),
+                'interval': 'step',
+                'frequency': 1,
+            }
+            return [optimizer], [scheduler]
+            
         return optimizer
 
     def _build_model(self):
