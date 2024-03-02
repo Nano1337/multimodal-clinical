@@ -11,7 +11,10 @@ from pytorch_lightning import seed_everything
 from torch.utils.data import DataLoader
 
 # internal files
-from get_data import get_data
+# from get_data import get_data
+
+# use noised x1 instead
+from get_data_noised import get_data
 
 
 # set reproducible 
