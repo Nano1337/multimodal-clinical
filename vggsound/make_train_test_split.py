@@ -39,8 +39,7 @@ mapping = pd.Series(df['folder'].values, index=df['filename']).to_dict()
 os.makedirs(os.path.join(data_root, 'train'), exist_ok=True)
 os.makedirs(os.path.join(data_root, 'test'), exist_ok=True)
 
-# TODO: change remove the 9
-for i in range(9, 20): 
+for i in range(20): 
 
     tar_gz_path = os.path.join(data_root, 'vggsound_' + str(i).zfill(2) + '.tar.gz')
 
@@ -67,6 +66,5 @@ for i in range(9, 20):
         shutil.rmtree(os.path.join(data_root, 'train', 'scratch'))
         shutil.rmtree(os.path.join(data_root, 'test', 'scratch'))
     os.remove(tar_gz_path[:-3])
-
-    # os.remove(tar_gz_path)
+    os.remove(tar_gz_path)
 

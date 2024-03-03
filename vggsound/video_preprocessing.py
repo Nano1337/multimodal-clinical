@@ -2,6 +2,10 @@ import pandas as pd
 import cv2
 import os
 import pdb
+from tqdm import tqdm
+
+# NOTE: I could probably speed this up with FFMpeg's h264_cuvid decoder using GPU-acceleration, but that requires extra install steps that may not be compatible
+# with everyone's machines
 
 class videoReader(object):
     def __init__(self, video_path, frame_interval=1, frame_kept_per_second=1):
@@ -31,51 +35,59 @@ class videoReader(object):
         self.frame_save_path = frame_save_path
 
         count = 0
-        frame_interval = int(self.fps/self.frame_kept_per_second)
+        frame_interval = int(self.fps / self.frame_kept_per_second)
+        frame_id = 0  # Initialize frame_id outside the loop
+
         while(count < self.video_frames):
             ret, image = self.vid.read()
             if not ret:
                 break
-            if count % self.fps == 0:
-                frame_id = 0
-            if frame_id<frame_interval*self.frame_kept_per_second and frame_id%frame_interval == 0:
+
+            # This condition ensures we save `frame_kept_per_second` frames per second of video
+            if frame_id % frame_interval == 0:
                 save_name = '{0}/{1:05d}.jpg'.format(self.frame_save_path, count)
                 cv2.imencode('.jpg', image)[1].tofile(save_name)
 
             frame_id += 1
+            # Reset frame_id every second (after counting through fps frames)
+            if frame_id == self.fps:
+                frame_id = 0
+
             count += 1
 
 
 class VGGSound_dataset(object):
-    def __init__(self, path_to_dataset = '/data/users/xiaokang_peng/VGGsound/', frame_interval=1, frame_kept_per_second=1):
-        self.path_to_video = os.path.join(path_to_dataset, 'test-videos/test-set/')
+    def __init__(self, mode = "train", path_to_dataset = '../data/vggsound/', frame_interval=1, frame_kept_per_second=1):
+        self.path_to_video = os.path.join(path_to_dataset, mode)
         self.frame_kept_per_second = frame_kept_per_second
-        self.path_to_save = os.path.join(path_to_dataset, 'test-videos/test-set-img/', 'Image-{:02d}-FPS'.format(self.frame_kept_per_second))
+        self.path_to_save = os.path.join(path_to_dataset, mode + '_Image-{:02d}-FPS'.format(self.frame_kept_per_second))
         if not os.path.exists(self.path_to_save):
             os.mkdir(self.path_to_save)
-
-        videos = '/data/users/xiaokang_peng/VGGsound/test-videos/test_video_list.txt'
-        with open(videos, 'r') as f:
-            self.file_list = f.readlines()
+        self.file_list = os.listdir(os.path.join(data_root, mode))
 
     def extractImage(self):
 
-        for i, each_video in enumerate(self.file_list):
-            if i % 100 == 0:
-                print('*******************************************')
-                print('Processing: {}/{}'.format(i, len(self.file_list)))
-                print('*******************************************')
-            video_dir = os.path.join(self.path_to_video, each_video[:-1])
+        for each_video in tqdm(self.file_list):
+            video_dir = os.path.join(self.path_to_video, each_video)
             try:
                 self.videoReader = videoReader(video_path=video_dir, frame_kept_per_second=self.frame_kept_per_second)
 
-                save_dir = os.path.join(self.path_to_save, each_video[:-1])
+                save_dir = os.path.join(self.path_to_save, each_video)
                 if not os.path.exists(save_dir):
                     os.mkdir(save_dir)
                 self.videoReader.video2frame_update(frame_save_path=save_dir)
             except:
-                print('Fail @ {}'.format(each_video[:-1]))
+                print('Fail @ {}'.format(each_video))
 
 
-vggsound = VGGSound_dataset()
-vggsound.extractImage()
+if __name__ == "__main__": 
+
+    data_root = "../data/vggsound/"
+
+    vggsound_test = VGGSound_dataset(mode="test", path_to_dataset=data_root)
+    vggsound_test.extractImage()
+
+    vggsound_train = VGGSound_dataset(mode="train", path_to_dataset=data_root)
+    vggsound_train.extractImage()
+
+

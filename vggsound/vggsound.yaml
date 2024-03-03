@@ -1,0 +1,16 @@
+num_classes: 309 
+batch_size: 64 
+learning_rate: 1.0e-3 # paper starts here and decays to 1e-4
+num_epochs: 100
+dropout_p: 0.1
+gpus: [0] # list of GPUs for multi-gpu training
+data_path: "../data/vggsound/"
+num_cpus: 12
+use_video_frames: 3 # number of video frames to stack for video input, more is better (kinda like data aug) but limited by VRAM
+
+# main settings that need to be checked
+use_wandb: False
+model_type: "ensemble"
+group_name: "vggsound_test" # cremad_cls28_ensemble_seeds
+seed: 0
+use_scheduler: False

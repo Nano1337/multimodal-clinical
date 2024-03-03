@@ -22,5 +22,9 @@ missing_files = sorted(list(file_names - existing_files))
 filtered_df = df[~df['filename'].isin(missing_files)]
 filtered_df = filtered_df.drop('filename', axis=1)
 
-filtered_df.to_csv('vggsound_corrected.csv', index=False, header=False)
-print("Done")
+
+num_unique_values = df[2].nunique()
+print(f"Number of unique values in column index 2: {num_unique_values}")
+
+# filtered_df.to_csv('vggsound_corrected.csv', index=False, header=False)
+# print("Done")
