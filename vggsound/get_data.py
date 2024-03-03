@@ -112,3 +112,4 @@ class VGGSound(Dataset):
         label = self.label[idx]
 
         return spectrogram, images, label
+
