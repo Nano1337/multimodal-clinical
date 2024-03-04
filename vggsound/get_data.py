@@ -13,6 +13,41 @@ import pdb
 import random
 import argparse
 from torch.utils.data.dataloader import default_collate
+import torchaudio
+
+def apply_spec_augment(spectrogram, freq_mask_param=30, time_mask_param=120, num_freq_masks=2, num_time_masks=3):
+    """
+    Apply SpecAugment (frequency and time masking) to a given spectrogram.
+    
+    Parameters:
+    - spectrogram: Tensor, the input spectrogram of shape [channels, freq, time].
+    - freq_mask_param: int, the maximum width of the frequency masks.
+    - time_mask_param: int, the maximum length of the time masks.
+    - num_freq_masks: int, the number of frequency masks to apply.
+    - num_time_masks: int, the number of time masks to apply.
+
+    Returns:
+    - Tensor, the augmented spectrogram.
+    """
+    # Ensure spectrogram is a PyTorch tensor
+    if isinstance(spectrogram, np.ndarray):
+        spectrogram = torch.from_numpy(spectrogram)
+
+    # Ensure the spectrogram is floating point, as required by torchaudio transforms
+    if spectrogram.dtype != torch.float32:
+        spectrogram = spectrogram.to(torch.float32)
+
+    # Apply frequency masking
+    freq_mask = torchaudio.transforms.FrequencyMasking(freq_mask_param)
+    for _ in range(num_freq_masks):
+        spectrogram = freq_mask(spectrogram)
+
+    # Apply time masking
+    time_mask = torchaudio.transforms.TimeMasking(time_mask_param)
+    for _ in range(num_time_masks):
+        spectrogram = time_mask(spectrogram)
+
+    return spectrogram
 
 class VGGSound(Dataset):
 
@@ -82,6 +117,16 @@ class VGGSound(Dataset):
 
         spectrogram = librosa.stft(new_sample, n_fft=256, hop_length=128)
         spectrogram = np.log(np.abs(spectrogram) + 1e-7)
+
+        # Audio
+        if self.mode == 'train':
+            spectrogram = apply_spec_augment(
+                spectrogram, 
+                freq_mask_param=30, 
+                time_mask_param=120, 
+                num_freq_masks=2,    
+                num_time_masks=3     
+            )
 
         if self.mode == 'train':
             transform = transforms.Compose([

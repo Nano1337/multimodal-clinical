@@ -1,3 +1,5 @@
+# NOTE: might need to rewrite WeightedRandomSampler in get_data.py into DistributedSampler 
+
 num_classes: 309 
 batch_size: 224
 learning_rate: 1.0e-3 # paper starts here and decays to 1e-4
@@ -13,4 +15,4 @@ use_wandb: True
 model_type: "ensemble" # options: jlogits, jprobas, ensemble
 group_name: "vggsound_test" # vggsound_cls309_ensemble_seeds
 seed: 0
-use_scheduler: False
+use_scheduler: True

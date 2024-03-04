@@ -70,6 +70,7 @@ if __name__ == "__main__":
         prefetch_factor = 4,
         sampler=train_sampler,
         collate_fn=train_dataset.custom_collate,
+        pin_memory=True,
     )
 
     val_sampler = make_balanced_sampler(val_dataset.label)
@@ -81,6 +82,7 @@ if __name__ == "__main__":
         prefetch_factor=4,
         sampler=val_sampler,
         collate_fn=val_dataset.custom_collate,
+        pin_memory=True,
     )
 
     test_sampler = make_balanced_sampler(test_dataset.label)
@@ -91,10 +93,11 @@ if __name__ == "__main__":
         persistent_workers=True, 
         prefetch_factor=4,
         collate_fn=test_dataset.custom_collate,
+        pin_memory=True,
     )
 
     # get model
-    model = MultimodalVGGSoundModel(args)
+    model = MultimodalVGGSoundModel(args) 
 
     # define trainer
     trainer = None

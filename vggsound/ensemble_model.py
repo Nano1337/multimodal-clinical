@@ -240,7 +240,7 @@ class MultimodalVGGSoundModel(pl.LightningModule):
         optimizer = torch.optim.SGD(self.parameters(), lr=self.args.learning_rate, momentum=0.9, weight_decay=1.0e-4)
         if self.args.use_scheduler:
             scheduler = {
-                'scheduler': StepLR(optimizer, step_size=10, gamma=0.5),
+                'scheduler': StepLR(optimizer, step_size=20, gamma=0.5),
                 'interval': 'epoch',
                 'frequency': 1,
             }
