@@ -7,10 +7,11 @@ import numpy as np
 from scipy import signal
 import torch
 from PIL import Image
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader, WeightedRandomSampler 
 from torchvision import transforms
 import pdb
 import random
+import argparse
 
 class VGGSound(Dataset):
 
@@ -31,8 +32,8 @@ class VGGSound(Dataset):
 
             for item in csv_reader:
                 if item[3] == 'train':
-                    video_dir = os.path.join('/data/users/xiaokang_peng/VGGsound/', 'train-videos/train-set-img', 'Image-{:02d}-FPS'.format(self.args.fps), item[0]+'_'+item[1]+'.mp4')
-                    audio_dir = os.path.join('/data/users/xiaokang_peng/VGGsound/', 'train-audios/train-set', item[0]+'_'+item[1]+'.wav')
+                    video_dir = os.path.join(self.args.data_path, 'train_Image-{:02d}-FPS'.format(1), item[0]+'_'+str(item[1]).zfill(6) + ".mp4")
+                    audio_dir = os.path.join(self.args.data_path, 'audio/train', item[0]+'_'+str(item[1]).zfill(6)+'.wav')
                     if os.path.exists(video_dir) and os.path.exists(audio_dir) and len(os.listdir(video_dir))>3 :
                         train_video_data.append(video_dir)
                         train_audio_data.append(audio_dir)
@@ -40,8 +41,8 @@ class VGGSound(Dataset):
                         train_label.append(item[2])
 
                 if item[3] == 'test':
-                    video_dir = os.path.join('/data/users/xiaokang_peng/VGGsound/', 'test-videos/test-set-img', 'Image-{:02d}-FPS'.format(self.args.fps), item[0]+'_'+item[1]+'.mp4')
-                    audio_dir = os.path.join('/data/users/xiaokang_peng/VGGsound/', 'test-audios/test-set', item[0]+'_'+item[1]+'.wav')
+                    video_dir = os.path.join(self.args.data_path, 'test_Image-{:02d}-FPS'.format(1), item[0]+'_'+str(item[1]).zfill(6) + ".mp4")
+                    audio_dir = os.path.join(self.args.data_path, 'audio/test', item[0]+'_'+str(item[1]).zfill(6)+'.wav')
                     if os.path.exists(video_dir) and os.path.exists(audio_dir) and len(os.listdir(video_dir))>3:
                         test_video_data.append(video_dir)
                         test_audio_data.append(audio_dir)
@@ -113,3 +114,48 @@ class VGGSound(Dataset):
 
         return spectrogram, images, label
 
+def make_balanced_sampler(labels):
+    class_counts = torch.bincount(torch.tensor(labels))
+    class_weights = 1. / class_counts
+    sample_weights = class_weights[labels]
+    sampler = WeightedRandomSampler(sample_weights, len(labels), replacement=True)
+    return sampler
+
+
+def get_data(args): 
+    train_set = VGGSound(args, mode='train')
+    test_set = VGGSound(args, mode='test')
+    val_set = test_set
+
+    return train_set, val_set, test_set
+
+if __name__ == "__main__": 
+    dirpath = "../data/vggsound"
+    parser = argparse.ArgumentParser()
+    args = parser.parse_args()
+    setattr(args, 'data_path', dirpath)
+    setattr(args, 'use_video_frames', 3)
+    
+    train_set, val_set, test_set = get_data(args)
+
+    train_sampler = make_balanced_sampler(train_set.label)
+
+    train_loader = DataLoader(
+        train_set, 
+        batch_size=16, 
+        sampler=train_sampler
+    )
+
+    batch = next(iter(train_loader))
+    print(f'x1: {batch[0].shape}, x2: {batch[1].shape}, label: {batch[2].shape}')
+    print(batch[2])
+
+    batch = next(iter(train_loader))
+    print(f'x1: {batch[0].shape}, x2: {batch[1].shape}, label: {batch[2].shape}')
+    print(batch[2])
+
+    """
+    x1: (B, 129, 626)
+    x2: (B, S, 3, 224, 224)
+    label: (B)
+    """
