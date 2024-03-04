@@ -18,5 +18,5 @@ def check_empty_subdirectories(directory):
         print("No empty subdirectories found.")
 
 if __name__ == "__main__":
-    directory_to_check = "../data/vggsound/test_Image-01-FPS"
+    directory_to_check = "../data/vggsound/train_Image-01-FPS"
     check_empty_subdirectories(directory_to_check)
