@@ -1,22 +1,22 @@
 import os
 
-def check_empty_subdirectories(directory):
+def check_subdirectories_with_min_files(directory, min_file_count=1):
     """
-    This function checks for empty subdirectories within a given directory.
-    It prints the paths of empty subdirectories if found.
+    This function checks for subdirectories within a given directory that have less than or equal to a specified minimum number of files.
+    It prints the paths of these subdirectories if found.
     """
-    empty_dirs = []
+    dirs_with_min_files = []
     for root, dirs, files in os.walk(directory):
-        if not dirs and not files:  # If there are no subdirectories and no files
-            empty_dirs.append(root)
+        if len(files) <= min_file_count:
+            dirs_with_min_files.append((root, len(files)))
     
-    if empty_dirs:
-        print("Empty subdirectories found:")
-        for dir in empty_dirs:
-            print(dir)
+    if dirs_with_min_files:
+        print(f"Subdirectories with {min_file_count} or fewer files found:")
+        for dir, count in dirs_with_min_files:
+            print(f"{dir} - {count} files")
     else:
-        print("No empty subdirectories found.")
+        print(f"No subdirectories with {min_file_count} or fewer files found.")
 
 if __name__ == "__main__":
-    directory_to_check = "../data/vggsound/train_Image-01-FPS"
-    check_empty_subdirectories(directory_to_check)
+    directory_to_check = "../data/vggsound/test_Image-01-FPS"
+    check_subdirectories_with_min_files(directory_to_check, 6)

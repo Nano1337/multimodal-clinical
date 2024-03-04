@@ -12,6 +12,7 @@ from torchvision import transforms
 import pdb
 import random
 import argparse
+from torch.utils.data.dataloader import default_collate
 
 class VGGSound(Dataset):
 
@@ -99,11 +100,14 @@ class VGGSound(Dataset):
 
         # Visual
         image_samples = os.listdir(self.video[idx])
-        select_index = np.random.choice(len(image_samples), size=self.args.use_video_frames, replace=False)
+        try: 
+            select_index = np.random.choice(len(image_samples), size=self.args.use_video_frames, replace=False)
+        except: 
+            select_index = np.random.choice(len(image_samples), size=self.args.use_video_frames, replace=True) 
         select_index.sort()
         images = torch.zeros((self.args.use_video_frames, 3, 224, 224))
-        for i in range(self.args.use_video_frames):
-            img = Image.open(os.path.join(self.video[idx], image_samples[i])).convert('RGB')
+        for i, index in enumerate(select_index):  # Use index from select_index to access image_samples
+            img = Image.open(os.path.join(self.video[idx], image_samples[index])).convert('RGB')  
             img = transform(img)
             images[i] = img
 
@@ -113,6 +117,13 @@ class VGGSound(Dataset):
         label = self.label[idx]
 
         return spectrogram, images, label
+    
+    def custom_collate(self, batch): 
+
+        batch = default_collate(batch)
+        batch[0] = batch[0].unsqueeze(1)
+
+        return batch
 
 def make_balanced_sampler(labels):
     class_counts = torch.bincount(torch.tensor(labels))
@@ -154,8 +165,3 @@ if __name__ == "__main__":
     print(f'x1: {batch[0].shape}, x2: {batch[1].shape}, label: {batch[2].shape}')
     print(batch[2])
 
-    """
-    x1: (B, 129, 626)
-    x2: (B, S, 3, 224, 224)
-    label: (B)
-    """
