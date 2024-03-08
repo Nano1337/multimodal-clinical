@@ -170,7 +170,7 @@ class EnricoDataset(Dataset):
         original_example = self.example_list[self.keys[idx]]
 
         # Decide whether to use the original or a random x1 image for the current example
-        use_random_x1 = random.random() > 1/20
+        use_random_x1 = random.random() > 0.9 # use 1/20 for complete random
         selected_screen_id = self.random_x1_mapping[original_example['screen_id']] if use_random_x1 else original_example['screen_id']
 
         # x1 image modality (screen image)

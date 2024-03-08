@@ -27,6 +27,7 @@ if __name__ == "__main__":
     # load configs into args
     parser = argparse.ArgumentParser()
     parser.add_argument("--config", "--configs", type=str, default=None) 
+    parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
     if args.config:
         with open(args.config, "r") as yaml_file:
@@ -35,6 +36,8 @@ if __name__ == "__main__":
         raise NotImplementedError
     for key, val in cfg.items():
         setattr(args, key, val)
+
+    
 
     seed_everything(args.seed, workers=True)
 

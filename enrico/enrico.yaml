@@ -5,10 +5,10 @@ num_epochs: 30
 dropout_p: 0.1
 gpus: [0]
 data_path: "../data/enrico/"
-num_cpus: 2
+num_cpus: 8
 
 # main settings that need to be checked
 use_wandb: True
-model_type: "ensemble"
-group_name: "enrico_cls20_ensemble_noised"
-seed: 3
+model_type: "jlogits" # ensemble
+group_name: "enrico_cls20_jlogits_noise_p=0.9"
+# seed: 3 # comment out if using run_parallel.sh

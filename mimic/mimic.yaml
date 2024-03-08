@@ -1,4 +1,4 @@
-num_classes: 2 # 6 for mortality task, 2 for ICD-9 tasks
+num_classes: 6 # 6 for mortality task, 2 for ICD-9 tasks
 batch_size: 32
 learning_rate: 1.0e-4
 num_epochs: 25
@@ -6,10 +6,10 @@ dropout_p: 0.1
 gpus: [0]
 data_path: "../data/mimic/im.pk"
 num_cpus: 2
-task_num: 7 # -1 is mortality, all others are for ICD-9 task
+task_num: -1 # -1 is mortality, all others are for ICD-9 task
 
 # main settings that need to be checked
 use_wandb: True
-model_type: "jprobas"
-group_name: "mimic_icdt7_jprobas_seeds"
-seed: 4
+model_type: "ensemble"
+group_name: "mimic_m6_ensemble_seeds"
+# seed: 4 

@@ -11,5 +11,8 @@ Currently functional benchmarks:
 - AVE
 - Crema-D
 - Food101
+- VGGSound
 
+TODO: 
+- Add pin_memory=True to every DataLoader (done for VGGSound already).
 
