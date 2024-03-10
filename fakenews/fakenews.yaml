@@ -1,32 +1,33 @@
 # training settings
 num_classes: 6 # there are also 3 class and 2 class versions but need to recompile dataframes
-batch_size: 32
-learning_rate: 5.0e-4
+batch_size: 500 # test with increasing batch to 500
+learning_rate: 1.0e-1
 num_epochs: 100
 max_seq_len: 40
 dropout_p: 0.1
 gpus: [0]
-data_path: "../data/mustard/sarcasm.pkl"
-num_cpus: 12
+num_cpus: 12 # change to 2 later
+text_embed_dim: 768
 
 # data settings
-modality: "text-image-dialogue"
-text_embedder: "all-distilroberta-v1" # update this to the nomic text embed v1 model 
+modality: "text-image"
+text_embedder: "all-mpnet-base-v2" # update this to the nomic text embed v1 model 
 dialogue_summarization_model: "sshleifer/distilbart-cnn-12-6"
-trained_model_version: "version_143"
+trained_model_version: "version_87"
 trained_model_path: null
 gpus: [0]
+dir_to_save_dataframe: "../data/fakenews/"
 train_data_path: "../data/fakenews/multimodal_train.tsv"
 val_data_path: "../data/fakenews/multimodal_val.tsv"
 test_data_path: "../data/fakenews/multimodal_test_public.tsv"
-dir_to_save_dataframe: "../data/fakenews/"
-preprocessed_train_dataframe_path: "../data/fakenews/train__text_image_dialogue_dataframe.pkl"
-preprocessed_val_dataframe_path: "../data/fakenews/val__text_image_dialogue_dataframe.pkl"
-preprocessed_test_dataframe_path: "../data/fakenews/test__text_image_dialogue_dataframe.pkl"
+preprocessed_train_dataframe_path: "../data/fakenews/train__text_image_dataframe.pkl"
+preprocessed_val_dataframe_path: "../data/fakenews/val__text_image_dataframe.pkl"
+preprocessed_test_dataframe_path: "../data/fakenews/test__text_image_dataframe.pkl"
 from_dialogue_dataframe: False
 
 # main settings that need to be checked
 use_wandb: True
 model_type: "jlogits"
-group_name: "fakenews_test" # "mustard_cls2_jlogits_seeds"
+group_name: "fakenews_cls6_jlogits_seeds" # "fakenews_cls6_jlogits_seeds"
 seed: 0
+use_scheduler: False

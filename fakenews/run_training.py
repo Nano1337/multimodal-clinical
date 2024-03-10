@@ -39,15 +39,15 @@ if __name__ == "__main__":
 
     seed_everything(args.seed, workers=True) 
 
-    # # model training type
-    # if args.model_type == "jlogits":
-    #     from joint_model import *
-    # elif args.model_type == "ensemble":
-    #     from ensemble_model import *
-    # elif args.model_type == "jprobas":
-    #     from joint_model_proba import *
-    # else:   
-    #     raise NotImplementedError("Model type not implemented")
+    # model training type
+    if args.model_type == "jlogits":
+        from joint_model import *
+    elif args.model_type == "ensemble":
+        from ensemble_model import *
+    elif args.model_type == "jprobas":
+        from joint_model_proba import *
+    else:   
+        raise NotImplementedError("Model type not implemented")
 
 
     """
@@ -57,8 +57,7 @@ if __name__ == "__main__":
 
     # datasets
     train_dataset, val_dataset, test_dataset = get_data(args)
-    print(len(train_dataset))
-    exit()
+
 
     # get dataloaders
     train_loader = DataLoader(
@@ -67,7 +66,7 @@ if __name__ == "__main__":
         num_workers=args.num_cpus, 
         persistent_workers=True,
         prefetch_factor = 4,
-        collate_fn=_process_2
+        collate_fn=train_dataset.collate_fn
     )
 
     val_loader = DataLoader(
@@ -77,7 +76,7 @@ if __name__ == "__main__":
         persistent_workers=True, 
         prefetch_factor=4,
         shuffle=False, 
-        collate_fn=_process_2
+        collate_fn=val_dataset.collate_fn
     )
 
     test_loader = DataLoader(
@@ -87,14 +86,15 @@ if __name__ == "__main__":
         persistent_workers=True, 
         prefetch_factor=4,
         shuffle=False,
-        collate_fn=_process_2
+        collate_fn=test_dataset.collate_fn
     )
 
     # get model
-    model = MultimodalMustardModel(args)
+    model = MultimodalFakenewsModel(args)
 
     # define trainer
     trainer = None
+    lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval='epoch')
     wandb_logger = WandbLogger(
         group=args.group_name,
         )
@@ -106,9 +106,11 @@ if __name__ == "__main__":
             logger = wandb_logger if args.use_wandb else None,
             deterministic=True, 
             default_root_dir="ckpts/",  
-            precision="32",
+            precision="bf16-mixed",
             num_sanity_val_steps=0, # check validation 
-            log_every_n_steps=10,
+            log_every_n_steps=30,  
+            callbacks=[pl.callbacks.LearningRateMonitor(logging_interval='epoch')],
+            # overfit_batches=1,
         )
     else: 
         raise NotImplementedError("It is not advised to train without a GPU")

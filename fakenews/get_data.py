@@ -20,12 +20,14 @@ from sentence_transformers import SentenceTransformer
 
 from torch.utils.data.dataloader import default_collate
 
-DATA_PATH = "./data"
-PL_ASSETS_PATH = "./lightning_logs"
+DATA_PATH = "../data"
+PL_ASSETS_PATH = "../lightning_logs"
 IMAGES_DIR = os.path.join('../data/fakenews/', "public_image_set")
 IMAGE_EXTENSION = ".jpg"
 
 from model import JointTextImageDialogueModel
+
+from transformers import BertTokenizer
 
 class Modality(enum.Enum):
     """
@@ -56,7 +58,7 @@ class MultimodalDataset(Dataset):
         df = None
         self.dataset_type = dataset_type
         self.dir_to_save_dataframe = dir_to_save_dataframe
-        self.tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
+        self.tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')  # Adjust model as needed
         self.saved_dataframe_filename_prefix = ""
         if Modality(modality) == Modality.TEXT:
             self.saved_dataframe_filename_prefix = "text"
@@ -341,3 +343,9 @@ def get_data(args):
     )
 
     return train_dataset, val_dataset, test_dataset
+
+
+    
+
+
+
