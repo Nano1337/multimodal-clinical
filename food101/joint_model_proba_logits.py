@@ -263,7 +263,7 @@ class MultimodalFoodModel(pl.LightningModule):
         avg_loss = torch.stack(self.test_metrics["test_loss"]).mean()
         avg_accuracy = torch.stack(self.test_metrics["test_acc"]).mean()
 
-        self.log("avg_test_loss", avg_loss, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("test_loss", avg_loss, on_step=False, on_epoch=True, prog_bar=False, logger=True)
         self.log("avg_test_acc", avg_accuracy, on_step=False, on_epoch=True, prog_bar=False, logger=True)
         self.log("x1_test_acc", x1_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
         self.log("x2_test_acc", x2_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)

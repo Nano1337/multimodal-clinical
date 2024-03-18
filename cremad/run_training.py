@@ -11,25 +11,26 @@ from pytorch_lightning import seed_everything
 from torch.utils.data import DataLoader
 
 # internal files
-from get_data import get_data, make_balanced_sampler
+from cremad.get_data import get_data, make_balanced_sampler
 
 # set reproducible 
 import torch
-torch.backends.cudnn.deterministc = True
+torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 torch.set_float32_matmul_precision('medium')
 
 DEFAULT_GPUS = [0]
 
-if __name__ == "__main__": 
-    torch.multiprocessing.set_start_method('spawn')
+def run_training():
+
+    # torch.multiprocessing.set_start_method('spawn')
 
     # load configs into args
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", "--configs", type=str, default=None) 
+    parser.add_argument("--dir", type=str, default=None) 
     args = parser.parse_args()
-    if args.config:
-        with open(args.config, "r") as yaml_file:
+    if args.dir:
+        with open(os.path.join(args.dir, args.dir + ".yaml"), "r") as yaml_file:
             cfg = yaml.safe_load(yaml_file)
     else:
         raise NotImplementedError
@@ -41,13 +42,15 @@ if __name__ == "__main__":
 
     # model training type
     if args.model_type == "jlogits":
-        from joint_model import *
+        from cremad.joint_model import MultimodalCremadModel
     elif args.model_type == "ensemble":
-        from ensemble_model import *
+        from cremad.ensemble_model import MultimodalCremadModel
     elif args.model_type == "jprobas":
-        from joint_model_proba import *
+        from cremad.joint_model_proba import MultimodalCremadModel
     elif args.model_type == "ogm_ge": 
-        from joint_model_ogm_ge import *
+        from cremad.joint_model_ogm_ge import MultimodalCremadModel
+    elif args.model_type == "ensemble_ogm_ge": 
+        from cremad.ensemble_model_noised import MultimodalCremadModel
     else:   
         raise NotImplementedError("Model type not implemented")
 

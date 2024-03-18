@@ -4,14 +4,14 @@ learning_rate: 1.0e-3 # paper starts here and decays to 1e-4
 num_epochs: 100
 dropout_p: 0.1
 gpus: [0]
-data_path: "../data/cremad/"
+data_path: "data/cremad/"
 num_cpus: 12
 
 # main settings that need to be checked
-use_wandb: True
-model_type: "ogm_ge"
-grad_mod_type: "OGM" # Options: (None | 'OGM_GE' | 'OGM' | 'noise')
+use_wandb: False
+model_type: "ensemble_ogm_ge"
+grad_mod_type: "noise" # Options: (None | 'OGM_GE' | 'OGM' | 'noise')
 alpha: 0.1
-group_name: "cremad_cls6_ogm_only" # 
+group_name: "cremad_cls6_ensemble_noised" # 
 seed: 5
 use_scheduler: True 
