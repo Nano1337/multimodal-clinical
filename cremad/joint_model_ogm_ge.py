@@ -10,7 +10,7 @@ from backbone import resnet18
 
 from torch.optim.lr_scheduler import StepLR
 
-def ogm_ge(model, out_1, out_2, label, alpha=0.5, modulation='OGM_GE'):
+def ogm_ge(model, out_1, out_2, label, alpha=0.1, modulation='OGM_GE'):
     '''
         Example usage:
         In init:
@@ -130,6 +130,10 @@ class MultimodalCremadModel(pl.LightningModule):
         self.args = args
         self.model = self._build_model()
 
+        self.automatic_optimization = False
+        self.ogm_modulation = self.args.grad_mod_type
+        self.ogm_alpha = self.args.alpha
+
         self.val_metrics = {
             "val_loss": [], 
             "val_acc": [],
@@ -163,7 +167,7 @@ class MultimodalCremadModel(pl.LightningModule):
         x1, x2, label = batch
 
         # Get predictions and loss from model
-        _, _, avg_logits, loss = self.model(x1, x2, label)
+        x1_logits, x2_logits, avg_logits, loss = self.model(x1, x2, label)
 
         # Calculate accuracy
         joint_acc = torch.mean((torch.argmax(avg_logits, dim=1) == label).float())
@@ -172,8 +176,26 @@ class MultimodalCremadModel(pl.LightningModule):
         self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=False, logger=True)
         self.log("train_acc", joint_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
 
-        # Return the loss
-        return loss
+        # # Return the loss
+        # return loss
+    
+        opt = self.optimizers()
+        opt.zero_grad()
+        self.manual_backward(loss)
+        if self.ogm_modulation:
+            ogm_ge(self.model, x1_logits, x2_logits, label, modulation=self.ogm_modulation, alpha=self.ogm_alpha)
+        opt.step()
+
+    def on_train_epoch_end(self):
+        if self.args.use_scheduler:
+            schedulers = self.lr_schedulers()
+            
+            # handle single scheduler and step schedulers per epoch
+            if not isinstance(schedulers, list):
+                schedulers = [schedulers]
+            for scheduler in schedulers:
+                scheduler.step()
+
 
     def validation_step(self, batch, batch_idx): 
         """Validation step for the model. Logs loss and accuracy.
