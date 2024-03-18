@@ -116,10 +116,10 @@ class JointLogitsBaseModel(pl.LightningModule, ABC):
         avg_loss = torch.stack(self.val_metrics["val_loss"]).mean()
         avg_acc = torch.stack(self.val_metrics["val_acc"]).mean()
 
-        self.log("val_loss", avg_loss, on_step=False, on_epoch=True, prog_bar=False, logger=True)
-        self.log("val_acc", avg_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
-        self.log("x1_val_acc", x1_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
-        self.log("x2_val_acc", x2_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("val_avg_loss", avg_loss, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("val_avg_acc", avg_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("val_x1_cal_acc", x1_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("val_x2_cal_acc", x2_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
         
         self.val_metrics["val_loss"].clear()
         self.val_metrics["val_acc"].clear()
@@ -180,10 +180,10 @@ class JointLogitsBaseModel(pl.LightningModule, ABC):
         avg_loss = torch.stack(self.test_metrics["test_loss"]).mean()
         avg_accuracy = torch.stack(self.test_metrics["test_acc"]).mean()
 
-        self.log("test_loss", avg_loss, on_step=False, on_epoch=True, prog_bar=False, logger=True)
-        self.log("test_acc", avg_accuracy, on_step=False, on_epoch=True, prog_bar=False, logger=True)
-        self.log("x1_test_acc", x1_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
-        self.log("x2_test_acc", x2_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("test_avg_loss", avg_loss, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("test_avg_acc", avg_accuracy, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("test_x1_cal_acc", x1_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("test_x2_cal_acc", x2_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
 
         self.test_metrics["test_loss"].clear()
         self.test_metrics["test_acc"].clear()
@@ -318,10 +318,10 @@ class EnsembleBaseModel(pl.LightningModule, ABC):
         x1_acc = torch.mean(torch.stack(self.val_metrics["val_x1_acc"]))
         x2_acc = torch.mean(torch.stack(self.val_metrics["val_x2_acc"]))
 
-        self.log("val_loss", avg_loss, on_step=False, on_epoch=True, prog_bar=False, logger=True)
-        self.log("val_acc", avg_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
-        self.log("x1_val_acc", x1_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
-        self.log("x2_val_acc", x2_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("val_avg_loss", avg_loss, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("val_avg_acc", avg_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("val_x1_cal_acc", x1_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("val_x2_cal_acc", x2_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
         
         self.val_metrics["val_loss"].clear()
         self.val_metrics["val_acc"].clear()
@@ -376,10 +376,10 @@ class EnsembleBaseModel(pl.LightningModule, ABC):
         x1_acc = torch.mean(torch.stack(self.test_metrics["test_x1_acc"]))
         x2_acc = torch.mean(torch.stack(self.test_metrics["test_x2_acc"]))
 
-        self.log("test_loss", avg_loss, on_step=False, on_epoch=True, prog_bar=False, logger=True)
-        self.log("test_acc", avg_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
-        self.log("x1_test_acc", x1_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
-        self.log("x2_test_acc", x2_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("test_avg_loss", avg_loss, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("test_avg_acc", avg_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("test_x1_cal_acc", x1_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("test_x2_cal_acc", x2_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
         
         self.test_metrics["test_loss"].clear()
         self.test_metrics["test_acc"].clear()
