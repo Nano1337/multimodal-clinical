@@ -10,6 +10,7 @@ num_cpus: 12
 # main settings that need to be checked
 use_wandb: True
 model_type: "jlogits"
-group_name: "cremad_cls6_jlogits_aug" # cremad_cls28_ensemble_seeds
+grad_mod_type: "OGM_GE" # Options: (None | 'OGM_GE' | 'OGM' | 'noise')
+group_name: "cremad_cls6_jlogits_again_less_aug" # 
 seed: 5
 use_scheduler: True 

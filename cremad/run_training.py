@@ -46,6 +46,8 @@ if __name__ == "__main__":
         from ensemble_model import *
     elif args.model_type == "jprobas":
         from joint_model_proba import *
+    elif args.model_type == "ogm_ge": 
+        from joint_model_ogm_ge import *
     else:   
         raise NotImplementedError("Model type not implemented")
 

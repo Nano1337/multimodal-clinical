@@ -24,7 +24,6 @@ def apply_spec_augment(spectrogram, freq_mask_param=30, time_mask_param=120, num
     - time_mask_param: int, the maximum length of the time masks.
     - num_freq_masks: int, the number of frequency masks to apply.
     - num_time_masks: int, the number of time masks to apply.
-
     Returns:
     - Tensor, the augmented spectrogram.
     """
@@ -108,7 +107,7 @@ class CremadDataset(Dataset):
                 transforms.ToTensor(),
                 transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
             ])
-    
+
         # Visual
         image_samples = os.listdir(self.image[idx])
         # select_index = np.random.choice(len(image_samples), size=self.args.num_frame, replace=False)
@@ -169,7 +168,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     args = parser.parse_args()
     setattr(args, 'data_path', dirpath)
-    
+
     train_set, val_set, test_set = get_data(args)
 
     train_sampler = make_balanced_sampler(train_set.label)
