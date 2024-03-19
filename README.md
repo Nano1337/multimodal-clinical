@@ -13,8 +13,6 @@
 ### TODO: 
 
 Tuesday:
-- Update BaseModel with EMA for train logit offsets (add for ensemble and jprobas)
-- Log both offset and no offsets for train/val/test
 - Add abstract class Run Trainer
 - Log config file to wandb too
 - Improve checkpointing logic
@@ -25,3 +23,9 @@ Rest of Week:
 - Do more HPO/read other paper configs to improve baseline perf
 - Incorporate OGM-GE testing to every dataset
 - Incorporate QMF testing to every dataset
+
+## Changelog
+
+March 19th:
+- Update BaseModels with EMA for unimodal training accuracy calibration
+- og both calibrated and uncalibrated unimodal accuracies for train/val/test
