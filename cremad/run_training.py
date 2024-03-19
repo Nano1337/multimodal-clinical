@@ -92,7 +92,6 @@ def run_training():
         persistent_workers=True, 
         prefetch_factor=4,
         collate_fn=train_dataset.custom_collate, 
-        sampler=test_sampler,
     )
 
     # get model

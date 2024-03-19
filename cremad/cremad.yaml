@@ -12,6 +12,6 @@ use_wandb: True
 model_type: "jlogits" 
 grad_mod_type: "None" # Options: (None | 'OGM_GE' | 'OGM' | 'noise')
 alpha: 0.1
-group_name: "cremad_cls6_jlogits_ema_test" # 
+group_name: "cremad_cls6_jlogits_emalog_final" # 
 seed: 5
 use_scheduler: True  
