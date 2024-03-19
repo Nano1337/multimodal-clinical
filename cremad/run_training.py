@@ -1,5 +1,6 @@
 
 # Basic Libraries
+from cgi import test
 import os 
 import argparse
 import yaml
@@ -90,7 +91,8 @@ def run_training():
         num_workers=args.num_cpus, 
         persistent_workers=True, 
         prefetch_factor=4,
-        collate_fn=train_dataset.custom_collate
+        collate_fn=train_dataset.custom_collate, 
+        sampler=test_sampler,
     )
 
     # get model
