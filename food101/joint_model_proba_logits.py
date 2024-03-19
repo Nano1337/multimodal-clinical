@@ -87,6 +87,7 @@ class FusionNet(nn.Module):
 
             return (x1_logits, x2_logits, avg_logits, loss)
 
+
 class MultimodalFoodModel(pl.LightningModule): 
 
     def __init__(self, args): 

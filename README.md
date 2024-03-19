@@ -15,7 +15,8 @@
 - Add abstract class Run Trainer
 - Log config file to wandb too
 - Improve checkpointing logic
-- Update every model file to inherit from BaseModel
+- Update Crema-D non-base models to inherit from BaseModel too
+- Update every model file to inherit from BaseModel (done with Crema-D)
 - Log both offset and no offsets for train/val/test
 - Do more HPO/read other paper configs to improve baseline perf
 - Incorporate OGM-GE testing to every dataset

@@ -130,10 +130,10 @@ class CremadDataset(Dataset):
         if self.mode == 'train':
             spectrogram = apply_spec_augment(
                 spectrogram, 
-                freq_mask_param=30,  # Reduced from 30 to make frequency masking less extensive
-                time_mask_param=120,  # Reduced from 120 to make time masking less extensive
-                num_freq_masks=2,    # Applying only 1 frequency mask instead of 2
-                num_time_masks=3     # Applying only 1 time mask instead of 3
+                freq_mask_param=30,  
+                time_mask_param=120, 
+                num_freq_masks=2,  
+                num_time_masks=3    
             )
 
         # label

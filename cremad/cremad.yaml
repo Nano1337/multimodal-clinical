@@ -9,7 +9,7 @@ num_cpus: 12
 
 # main settings that need to be checked
 use_wandb: False
-model_type: "ensemble_ogm_ge"
+model_type: "jprobas" 
 grad_mod_type: "noise" # Options: (None | 'OGM_GE' | 'OGM' | 'noise')
 alpha: 0.1
 group_name: "cremad_cls6_ensemble_noised" # 

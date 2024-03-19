@@ -23,8 +23,6 @@ DEFAULT_GPUS = [0]
 
 def run_training():
 
-    # torch.multiprocessing.set_start_method('spawn')
-
     # load configs into args
     parser = argparse.ArgumentParser()
     parser.add_argument("--dir", type=str, default=None) 
@@ -36,7 +34,6 @@ def run_training():
         raise NotImplementedError
     for key, val in cfg.items():
         setattr(args, key, val)
-
 
     seed_everything(args.seed, workers=True) 
 
