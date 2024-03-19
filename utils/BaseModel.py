@@ -1,8 +1,11 @@
+from abc import ABC, abstractmethod
+
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
 from torch.optim.lr_scheduler import StepLR
-from abc import ABC, abstractmethod
+
+from utils.EMA import EMA
 
 class JointLogitsBaseModel(pl.LightningModule, ABC): 
 
@@ -17,6 +20,17 @@ class JointLogitsBaseModel(pl.LightningModule, ABC):
 
         self.args = args
         self.model = self._build_model()
+
+
+        self.num_modality = 2
+        self.ema_offset = EMA(torch.zeros(self.num_modality, self.args.num_classes))
+
+        self.train_metrics = {
+            "train_loss": [],
+            "train_acc": [],
+            "train_logits": [],
+            "val_labels": [],
+        }
 
         self.val_metrics = {
             "val_loss": [], 
@@ -51,7 +65,21 @@ class JointLogitsBaseModel(pl.LightningModule, ABC):
         x1, x2, label = batch
 
         # Get predictions and loss from model
-        _, _, avg_logits, loss = self.model(x1, x2, label)
+        x1_logits, x2_logits, avg_logits, loss = self.model(x1, x2, label)
+        # Calculate uncalibrated accuracy for x1 and x2
+        x1_acc_uncal = torch.mean((torch.argmax(x1_logits, dim=1) == label).float())
+        x2_acc_uncal = torch.mean((torch.argmax(x2_logits, dim=1) == label).float())
+
+        # Calculate calibrated accuracy for x1 and x2
+        x1_acc_cal = torch.mean((torch.argmax(x1_logits_cal, dim=1) == label).float())
+        x2_acc_cal = torch.mean((torch.argmax(x2_logits_cal, dim=1) == label).float())
+
+        # calibrate unimodal logits
+        logits_stack = torch.stack([x1_logits, x2_logits])
+        self.ema_offset.update(torch.mean(logits_stack, dim=1))
+        
+        x1_logits_cal = x1_logits + self.ema_offset.offset[0].to(x1_logits.get_device())
+        x2_logits_cal = x2_logits + self.ema_offset.offset[1].to(x2_logits.get_device())
 
         # Calculate accuracy
         joint_acc = torch.mean((torch.argmax(avg_logits, dim=1) == label).float())
@@ -59,9 +87,31 @@ class JointLogitsBaseModel(pl.LightningModule, ABC):
         # Log loss and accuracy
         self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=False, logger=True)
         self.log("train_acc", joint_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
+        self.log("train_x1_acc")
+
+        # Log uncalibrated and calibrated accuracies
+        self.train_metrics["train_x1_acc_uncal"].append(x1_acc_uncal.item())
+        self.train_metrics["train_x2_acc_uncal"].append(x2_acc_uncal.item())
+        self.train_metrics["train_x1_acc_cal"].append(x1_acc_cal.item())
+        self.train_metrics["train_x2_acc_cal"].append(x2_acc_cal.item())
+        self.train_metrics["train_acc"].append(joint_acc)
 
         # Return the loss
         return loss
+    
+    
+    def on_train_epoch_end(self) -> None:
+        """ Called at the end of the training epoch. Logs average loss and accuracy.
+
+        """
+        avg_loss = torch.stack(self.train_metrics["train_loss"]).mean()
+        avg_acc = torch.stack(self.train_metrics["train_acc"]).mean()
+
+        self.log("train_avg_loss", avg_loss, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("train_avg_acc", avg_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        
+        self.train_metrics["train_loss"].clear()
+        self.train_metrics["train_acc"].clear()
 
     def validation_step(self, batch, batch_idx): 
         """Validation step for the model. Logs loss and accuracy.
