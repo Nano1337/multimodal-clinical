@@ -14,4 +14,4 @@ grad_mod_type: "None" # Options: (None | 'OGM_GE' | 'OGM' | 'noise')
 alpha: 0.1
 group_name: "cremad_cls6_jlogits_ema_test" # 
 seed: 5
-use_scheduler: True 
+use_scheduler: True  

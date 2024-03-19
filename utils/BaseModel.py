@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import numpy as np
 
 import pytorch_lightning as pl
 import torch
@@ -30,6 +31,10 @@ class JointLogitsBaseModel(pl.LightningModule, ABC):
             "train_acc": [],
             "train_logits": [],
             "val_labels": [],
+            "train_x1_acc_uncal": [],
+            "train_x2_acc_uncal": [],
+            "train_x1_acc_cal": [],
+            "train_x2_acc_cal": [],
         }
 
         self.val_metrics = {
@@ -98,6 +103,7 @@ class JointLogitsBaseModel(pl.LightningModule, ABC):
         self.train_metrics["train_x1_acc_cal"].append(x1_acc_cal.item())
         self.train_metrics["train_x2_acc_cal"].append(x2_acc_cal.item())
         self.train_metrics["train_acc"].append(joint_acc)
+        self.train_metrics["train_loss"].append(loss)
 
         # Return the loss
         return loss
@@ -112,10 +118,10 @@ class JointLogitsBaseModel(pl.LightningModule, ABC):
 
         self.log("train_avg_loss", avg_loss, on_step=False, on_epoch=True, prog_bar=False, logger=True)
         self.log("train_avg_acc", avg_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
-        self.log("train_avg_x1_acc_uncal", torch.stack(self.train_metrics["train_x1_acc_uncal"]).mean(), on_step=False, on_epoch=True, prog_bar=False, logger=True)
-        self.log("train_avg_x2_acc_uncal", torch.stack(self.train_metrics["train_x2_acc_uncal"]).mean(), on_step=False, on_epoch=True, prog_bar=False, logger=True)
-        self.log("train_avg_x1_acc_cal", torch.stack(self.train_metrics["train_x1_acc_cal"]).mean(), on_step=False, on_epoch=True, prog_bar=False, logger=True)
-        self.log("train_avg_x2_acc_cal", torch.stack(self.train_metrics["train_x2_acc_cal"]).mean(), on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("train_avg_x1_acc_uncal", np.mean(np.array(self.train_metrics["train_x1_acc_uncal"])), on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("train_avg_x2_acc_uncal", np.mean(np.array(self.train_metrics["train_x2_acc_uncal"])), on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("train_avg_x1_acc_cal", np.mean(np.array(self.train_metrics["train_x1_acc_cal"])), on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("train_avg_x2_acc_cal", np.mean(np.array(self.train_metrics["train_x2_acc_cal"])), on_step=False, on_epoch=True, prog_bar=False, logger=True)
         
         self.train_metrics["train_loss"].clear()
         self.train_metrics["train_acc"].clear()
