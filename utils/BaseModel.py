@@ -66,20 +66,20 @@ class JointLogitsBaseModel(pl.LightningModule, ABC):
 
         # Get predictions and loss from model
         x1_logits, x2_logits, avg_logits, loss = self.model(x1, x2, label)
+
         # Calculate uncalibrated accuracy for x1 and x2
         x1_acc_uncal = torch.mean((torch.argmax(x1_logits, dim=1) == label).float())
         x2_acc_uncal = torch.mean((torch.argmax(x2_logits, dim=1) == label).float())
 
-        # Calculate calibrated accuracy for x1 and x2
-        x1_acc_cal = torch.mean((torch.argmax(x1_logits_cal, dim=1) == label).float())
-        x2_acc_cal = torch.mean((torch.argmax(x2_logits_cal, dim=1) == label).float())
-
         # calibrate unimodal logits
         logits_stack = torch.stack([x1_logits, x2_logits])
         self.ema_offset.update(torch.mean(logits_stack, dim=1))
-        
         x1_logits_cal = x1_logits + self.ema_offset.offset[0].to(x1_logits.get_device())
         x2_logits_cal = x2_logits + self.ema_offset.offset[1].to(x2_logits.get_device())
+
+        # Calculate calibrated accuracy for x1 and x2
+        x1_acc_cal = torch.mean((torch.argmax(x1_logits_cal, dim=1) == label).float())
+        x2_acc_cal = torch.mean((torch.argmax(x2_logits_cal, dim=1) == label).float())
 
         # Calculate accuracy
         joint_acc = torch.mean((torch.argmax(avg_logits, dim=1) == label).float())
@@ -87,7 +87,10 @@ class JointLogitsBaseModel(pl.LightningModule, ABC):
         # Log loss and accuracy
         self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=False, logger=True)
         self.log("train_acc", joint_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
-        self.log("train_x1_acc")
+        self.log("train_x1_acc", x1_acc_cal, on_step=True, on_epoch=True, prog_bar=False, logger=True)
+        self.log("train_x2_acc", x2_acc_cal, on_step=True, on_epoch=True, prog_bar=False, logger=True)
+        self.log("train_x1_uncal_acc", x1_acc_uncal, on_step=True, on_epoch=True, prog_bar=False, logger=True)
+        self.log("train_x2_uncal_acc", x2_acc_uncal, on_step=True, on_epoch=True, prog_bar=False, logger=True)
 
         # Log uncalibrated and calibrated accuracies
         self.train_metrics["train_x1_acc_uncal"].append(x1_acc_uncal.item())
@@ -109,15 +112,23 @@ class JointLogitsBaseModel(pl.LightningModule, ABC):
 
         self.log("train_avg_loss", avg_loss, on_step=False, on_epoch=True, prog_bar=False, logger=True)
         self.log("train_avg_acc", avg_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("train_avg_x1_acc_uncal", torch.stack(self.train_metrics["train_x1_acc_uncal"]).mean(), on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("train_avg_x2_acc_uncal", torch.stack(self.train_metrics["train_x2_acc_uncal"]).mean(), on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("train_avg_x1_acc_cal", torch.stack(self.train_metrics["train_x1_acc_cal"]).mean(), on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("train_avg_x2_acc_cal", torch.stack(self.train_metrics["train_x2_acc_cal"]).mean(), on_step=False, on_epoch=True, prog_bar=False, logger=True)
         
         self.train_metrics["train_loss"].clear()
         self.train_metrics["train_acc"].clear()
+        self.train_metrics["train_x1_acc_uncal"].clear()
+        self.train_metrics["train_x2_acc_uncal"].clear()
+        self.train_metrics["train_x1_acc_cal"].clear()
+        self.train_metrics["train_x2_acc_cal"].clear()
 
     def validation_step(self, batch, batch_idx): 
         """Validation step for the model. Logs loss and accuracy.
 
         Args:
-            batch (Tuple[torch.Tensor, torch.Tensor, torch.Tensor]): Tuple containing screenshot, wireframe, and label
+            batch (Tuple[torch.Tensor, torch.Tensor, torch.Tensor]): Tuple containing x1, x2, and label
             batch_idx (int): Index of the batch
 
         Returns:
@@ -180,7 +191,7 @@ class JointLogitsBaseModel(pl.LightningModule, ABC):
         """Test step for the model. Logs loss and accuracy.
 
         Args:
-            batch (Tuple[torch.Tensor, torch.Tensor, torch.Tensor]): Tuple containing screenshot, wireframe, and label
+            batch (Tuple[torch.Tensor, torch.Tensor, torch.Tensor]): Tuple containing x1, x2, and label
             batch_idx (int): Index of the batch
 
         Returns:
@@ -324,7 +335,7 @@ class EnsembleBaseModel(pl.LightningModule, ABC):
         """Validation step for the model. Logs loss and accuracy.
 
         Args:
-            batch (Tuple[torch.Tensor, torch.Tensor, torch.Tensor]): Tuple containing screenshot, wireframe, and label
+            batch (Tuple[torch.Tensor, torch.Tensor, torch.Tensor]): Tuple containing x1, x2, and label
             batch_idx (int): Index of the batch
 
         Returns:
@@ -382,7 +393,7 @@ class EnsembleBaseModel(pl.LightningModule, ABC):
         """Test step for the model. Logs loss and accuracy.
 
         Args:
-            batch (Tuple[torch.Tensor, torch.Tensor, torch.Tensor]): Tuple containing screenshot, wireframe, and label
+            batch (Tuple[torch.Tensor, torch.Tensor, torch.Tensor]): Tuple containing x1, x2, and label
             batch_idx (int): Index of the batch
 
         Returns:
@@ -516,7 +527,7 @@ class JointProbLogitsBaseModel(pl.LightningModule, ABC):
         """Validation step for the model. Logs loss and accuracy.
 
         Args:
-            batch (Tuple[torch.Tensor, torch.Tensor, torch.Tensor]): Tuple containing screenshot, wireframe, and label
+            batch (Tuple[torch.Tensor, torch.Tensor, torch.Tensor]): Tuple containing x1, x2, and label
             batch_idx (int): Index of the batch
 
         Returns:
@@ -579,7 +590,7 @@ class JointProbLogitsBaseModel(pl.LightningModule, ABC):
         """Test step for the model. Logs loss and accuracy.
 
         Args:
-            batch (Tuple[torch.Tensor, torch.Tensor, torch.Tensor]): Tuple containing screenshot, wireframe, and label
+            batch (Tuple[torch.Tensor, torch.Tensor, torch.Tensor]): Tuple containing x1, x2, and label
             batch_idx (int): Index of the batch
 
         Returns:
