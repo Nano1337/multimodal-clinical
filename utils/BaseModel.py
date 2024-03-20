@@ -503,7 +503,7 @@ class EnsembleBaseModel(pl.LightningModule, ABC):
         optimizer = torch.optim.SGD(self.parameters(), lr=self.args.learning_rate, momentum=0.9, weight_decay=1.0e-4)
         if self.args.use_scheduler:
             scheduler = {
-                'scheduler': StepLR(optimizer, step_size=10, gamma=0.5),
+                'scheduler': StepLR(optimizer, step_size=70, gamma=0.1),
                 'interval': 'epoch',
                 'frequency': 1,
             }
@@ -779,8 +779,8 @@ class JointProbLogitsBaseModel(pl.LightningModule, ABC):
         optimizer = torch.optim.SGD(self.parameters(), lr=self.args.learning_rate, momentum=0.9, weight_decay=1.0e-4)
         if self.args.use_scheduler:
             scheduler = {
-                'scheduler': StepLR(optimizer, step_size=500, gamma=0.75),
-                'interval': 'step',
+                'scheduler': StepLR(optimizer, step_size=70, gamma=0.1),
+                'interval': 'epoch',
                 'frequency': 1,
             }
             return [optimizer], [scheduler]
