@@ -13,9 +13,8 @@
 ### TODO: 
 
 Tuesday:
-- Add abstract class Run Trainer
-- Log config file to wandb too
-- Improve checkpointing logic
+- Update YAMLs to override a base config file
+- Update every run_training.py file for top and bottom containerization in utils edits
 
 Rest of Week:
 - Update Crema-D non-base models to inherit from BaseModel too
@@ -28,4 +27,7 @@ Rest of Week:
 
 March 19th:
 - Update BaseModels with EMA for unimodal training accuracy calibration
-- og both calibrated and uncalibrated unimodal accuracies for train/val/test
+- Log both calibrated and uncalibrated unimodal accuracies for train/val/test
+- Log config file to WandB too
+- Improve checkpointing logic
+- Encapsulate lightning trainer logic into utils
