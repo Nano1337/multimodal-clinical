@@ -8,7 +8,7 @@ from cremad.backbone import resnet18
 
 from torch.optim.lr_scheduler import StepLR
 
-from utils.OGM_GE import ogm_ge
+from existing_algos.OGM_GE import ogm_ge
 
 class FusionNet(nn.Module):
     def __init__(

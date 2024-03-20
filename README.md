@@ -43,6 +43,8 @@ Rest of Week:
 - Do more HPO/read other paper configs to improve baseline perf
 - Incorporate OGM-GE testing to every dataset
 - Incorporate QMF testing to every dataset
+- Create inference script with config to run testing only
 
 Haoli's Personal Stuff: 
 - Clean up useless ckpts in each subfolder since they're all supposed to be in the data folder now
+
