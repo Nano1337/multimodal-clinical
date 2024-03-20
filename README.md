@@ -1,5 +1,11 @@
 # Multimodal Enfusion
 
+By: Haoli Yin and Jenni Crawford
+
+## Introduction
+
+A Work in Progress...
+
 ## Functional benchmarks: 
 - Audio-Video Event Localization (AVE), transformed into classification task per PMR paper
 - Audio-Video MNIST (AV-MNIST) for Digit Classification
@@ -31,8 +37,8 @@ March 19th:
 ### TODO: 
 
 Rest of Week:
+- Update Crema-D non-base models to inherit from BaseModel too (move other-works specific to another dir other than utils)
 - Update every run_training.py file for config and trainer encapsulation
-- Update Crema-D non-base models to inherit from BaseModel too
 - Update every model file to inherit from BaseModel (done with Crema-D)
 - Do more HPO/read other paper configs to improve baseline perf
 - Incorporate OGM-GE testing to every dataset
