@@ -9,9 +9,9 @@ num_cpus: 12
 
 # main settings that need to be checked
 use_wandb: True
-model_type: "ensemble" # "ogm_ge" 
-grad_mod_type: "None" # Options: (None | 'OGM_GE' | 'OGM' | 'noise')
+model_type: "ensemble_ogm_ge" # "ogm_ge" 
+grad_mod_type: "noise" # Options: (None | 'OGM_GE' | 'OGM' | 'noise')
 alpha: 0.8 # recommended setting 0.8 for Crema-D
-group_name: "cremad_cls6_ensemble_hpo" # cremad_cls6_jlogits_ogmge_alpha=0.8
+group_name: "cremad_cls6_ensemble_noised_hpo" # cremad_cls6_jlogits_ogmge_alpha=0.8
 seed: 5
 use_scheduler: True  
