@@ -4,6 +4,7 @@ import os
 import argparse
 import wandb
 import yaml
+from importlib import resources 
 
 # Deep Learning Libraries
 from pytorch_lightning import seed_everything 
@@ -12,6 +13,7 @@ from torch.utils.data import DataLoader
 # internal files
 from cremad.get_data import get_data, make_balanced_sampler
 from utils.run_trainer import run_trainer
+from utils.setup_configs import setup_configs
 
 # set reproducible 
 import torch
@@ -20,25 +22,15 @@ torch.backends.cudnn.benchmark = False
 torch.set_float32_matmul_precision('medium')
 
 def run_training():
+    """
+    Data: 
+    - batch[0] is (B, 257, 1004) audio spectrogram, modality x1
+    - batch[1] is (B, 3, 3, 224, 224) sample of 3 images from a video, modality x2
+    - batch[2] is [B] labels, 6 sentiment classes
+    """
 
-    ############################# TODO: update with YAML merging logic and put in utils
-
-    # load configs into args
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--dir", type=str, default=None) 
-    args = parser.parse_args()
-    if args.dir:
-        with open(os.path.join(args.dir, args.dir + ".yaml"), "r") as yaml_file:
-            cfg = yaml.safe_load(yaml_file)
-    else:
-        raise NotImplementedError
-    for key, val in cfg.items():
-        setattr(args, key, val)
-
-    seed_everything(args.seed, workers=True) 
-
-
-    ########################################################################
+    # manage configs and set reproducibility
+    args = setup_configs()
 
     # model training type
     if args.model_type == "jlogits":
@@ -53,12 +45,6 @@ def run_training():
         from cremad.ensemble_model_noised import MultimodalCremadModel
     else:   
         raise NotImplementedError("Model type not implemented")
-
-    """
-    batch[0] is (B, 257, 1004) audio spectrogram, modality x1
-    batch[1] is (B, 3, 3, 224, 224) sample of 3 images from a video, modality x2
-    batch[2] is [B] labels, 6 sentiment classes
-    """
 
     # datasets
     train_dataset, val_dataset, test_dataset = get_data(args)

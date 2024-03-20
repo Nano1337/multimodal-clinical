@@ -12,11 +12,10 @@
 
 ### TODO: 
 
-Tuesday:
-- Update YAMLs to override a base config file
-- Update every run_training.py file for top and bottom containerization in utils edits
+Wednesday
 
 Rest of Week:
+- Update every run_training.py file for config and trainer encapsulation
 - Update Crema-D non-base models to inherit from BaseModel too
 - Update every model file to inherit from BaseModel (done with Crema-D)
 - Do more HPO/read other paper configs to improve baseline perf
@@ -26,8 +25,9 @@ Rest of Week:
 ## Changelog
 
 March 19th:
-- Update BaseModels with EMA for unimodal training accuracy calibration
-- Log both calibrated and uncalibrated unimodal accuracies for train/val/test
-- Log config file to WandB too
-- Improve checkpointing logic
-- Encapsulate lightning trainer logic into utils
+- [x] Update BaseModels with EMA for unimodal training accuracy calibration
+- [x] Log both calibrated and uncalibrated unimodal accuracies for train/val/test
+- [x] Log config file to WandB too
+- [x] Improve checkpointing logic
+- [x] Encapsulate lightning trainer logic into utils
+- [x] Update YAMLs to override a base config file
