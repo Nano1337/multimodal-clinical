@@ -16,6 +16,25 @@ A Work in Progress...
 - [ ] MIMIC (Metadata, Timeseries) for EHR Mortality Prediction
 - [ ] VGGSound (Audio, Video) for Sound Classification
 
+## Setup
+
+To get started, create a python virtual environment and activate it
+```bash
+python -m venv venv
+source venv/bin/activate
+```
+
+Optionally, install the fast uv installer for faster installation
+```bash
+pip install uv
+pip uv install -r requirements.txt
+```
+
+Or install the requirements directly
+```bash
+pip install -r requirements.txt
+```
+
 ## Usage
 
 For example, to run Crema-D, modify the corresponding YAML and run the following command:
