@@ -27,7 +27,7 @@ source venv/bin/activate
 Optionally, install the fast uv installer for faster installation
 ```bash
 pip install uv
-pip uv install -r requirements.txt
+uv pip install -r requirements.txt
 ```
 
 Or install the requirements directly
@@ -44,6 +44,9 @@ python main.py --dir cremad
 
 ## Changelog
 
+March 21st: 
+- [X] - Update Crema-D non-base models to inherit from BaseModel too (move other-works specific to another dir other than utils)
+
 March 19th:
 - [x] Update BaseModels with EMA for unimodal training accuracy calibration
 - [x] Log both calibrated and uncalibrated unimodal accuracies for train/val/test
@@ -56,7 +59,8 @@ March 19th:
 ### TODO: 
 
 Rest of Week:
-- Update Crema-D non-base models to inherit from BaseModel too (move other-works specific to another dir other than utils)
+
+- Implement QMF for Crema-D
 - Update every run_training.py file for config and trainer encapsulation
 - Update every model file to inherit from BaseModel (done with Crema-D)
 - Do more HPO/read other paper configs to improve baseline perf

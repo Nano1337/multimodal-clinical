@@ -32,20 +32,6 @@ def run_training():
     # manage configs and set reproducibility
     args = setup_configs()
 
-    # model training type
-    if args.model_type == "jlogits":
-        from cremad.joint_model import MultimodalCremadModel
-    elif args.model_type == "ensemble":
-        from cremad.ensemble_model import MultimodalCremadModel
-    elif args.model_type == "jprobas":
-        from cremad.joint_model_proba import MultimodalCremadModel
-    elif args.model_type == "ogm_ge": 
-        from cremad.joint_model_ogm_ge import MultimodalCremadModel
-    elif args.model_type == "ensemble_ogm_ge": 
-        from cremad.ensemble_model_noised import MultimodalCremadModel
-    else:   
-        raise NotImplementedError("Model type not implemented")
-
     # datasets
     train_dataset, val_dataset, test_dataset = get_data(args)
 
@@ -81,6 +67,23 @@ def run_training():
         prefetch_factor=4,
         collate_fn=train_dataset.custom_collate, 
     )
+
+    # model training type
+    if args.model_type == "jlogits":
+        from cremad.joint_model import MultimodalCremadModel
+    elif args.model_type == "ensemble":
+        from cremad.ensemble_model import MultimodalCremadModel
+    elif args.model_type == "jprobas":
+        from cremad.joint_model_proba import MultimodalCremadModel
+    elif args.model_type == "ogm_ge": 
+        from cremad.joint_model_ogm_ge import MultimodalCremadModel
+    elif args.model_type == "ensemble_ogm_ge": 
+        from cremad.ensemble_model_noised import MultimodalCremadModel
+    elif args.model_type == "qmf": 
+        from cremad.joint_model_qmf import MultimodalCremadModel
+        setattr(args, "num_samples", len(train_dataset))
+    else:   
+        raise NotImplementedError("Model type not implemented")
 
     # get model
     model = MultimodalCremadModel(args)

@@ -139,6 +139,8 @@ class CremadDataset(Dataset):
         # label
         label = self.label[idx]
 
+        if self.args.model_type == 'qmf':
+            return spectrogram, images, label, idx
         return spectrogram, images, label
 
     def custom_collate(self, batch): 

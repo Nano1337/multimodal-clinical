@@ -22,7 +22,6 @@ class JointLogitsBaseModel(pl.LightningModule, ABC):
         self.args = args
         self.model = self._build_model()
 
-
         self.num_modality = 2
         self.ema_offset = EMA(torch.zeros(self.num_modality, self.args.num_classes))
 
