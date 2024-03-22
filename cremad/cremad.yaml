@@ -5,7 +5,7 @@ num_epochs: 100
 dropout_p: 0.1
 gpus: [0]
 data_path: "data/cremad/"
-num_cpus: 1 # change to 12 when training
+num_cpus: 12 # change to 12 when training
 
 # OGM-GE settings
 grad_mod_type: "OGM" # Options: (None | 'OGM_GE' | 'OGM' | 'noise')
@@ -14,7 +14,7 @@ alpha: 0.8 # recommended setting 0.8 for Crema-D
 
 # main settings that need to be checked
 use_wandb: True
-model_type: "qmf" # "ogm_ge" 
-group_name: "cremad_cls6_jlogits_qmf" # cremad_cls6_jlogits_ogmge_alpha=0.8
+model_type: "qmf_ablate" # "ogm_ge" 
+group_name: "cremad_cls6_jlogits_qmf_ablate" # cremad_cls6_jlogits_ogmge_alpha=0.8
 seed: 5
 use_scheduler: True  
