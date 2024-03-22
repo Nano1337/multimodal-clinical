@@ -8,13 +8,16 @@ data_path: "data/cremad/"
 num_cpus: 12 # change to 12 when training
 
 # OGM-GE settings
-grad_mod_type: "OGM" # Options: (None | 'OGM_GE' | 'OGM' | 'noise')
-alpha: 0.8 # recommended setting 0.8 for Crema-D
+grad_mod_type: "OGM_GE" # Options: (None | 'OGM_GE' | 'OGM' | 'noise') 
+alpha: 0.8 # recommended setting 0.8 for Crema-D 
 
 
 # main settings that need to be checked
 use_wandb: True
-model_type: "qmf_ablate_Ljoint" # "ogm_ge" 
-group_name: "cremad_cls6_jlogits_qmf_ablate_Ljoint" # cremad_cls6_jlogits_ogmge_alpha=0.8
+model_type: "ogm_ge_lreg" # "ogm_ge" 
+group_name: "cremad_cls6_jlogits_ogm_ge_Lreg" 
 seed: 5
 use_scheduler: True  
+
+# experiment list: 
+# modify QMF file with OGM-GE and ablate those components

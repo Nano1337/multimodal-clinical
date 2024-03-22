@@ -13,7 +13,7 @@ class History(object):
         self.correctness = np.zeros((n_data))
         self.confidence = np.zeros((n_data))
         self.max_correctness = 1
-        self.use_ema = False
+        self.use_ema = True 
         self.alpha = 0.1
 
     # correctness update

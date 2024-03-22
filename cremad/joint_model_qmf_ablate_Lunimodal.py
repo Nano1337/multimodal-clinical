@@ -67,7 +67,7 @@ class FusionNet(nn.Module):
         loss_reg = self.qmf.reg_loss(conf, idx.squeeze())
         loss_joint = self.loss_fn(logits_df, label)
 
-        loss = loss_joint + torch.sum(torch.stack(loss_uni)) + loss_reg
+        loss = loss_joint + loss_reg # + torch.sum(torch.stack(loss_uni)) 
 
         # fuse at logit level
         avg_logits = (x1_logits + x2_logits) / 2
@@ -147,7 +147,6 @@ class MultimodalCremadModel(JointLogitsBaseModel):
         self.train_metrics["train_x1_acc"].append(x1_acc_cal.item())
         self.train_metrics["train_x2_acc"].append(x2_acc_cal.item())
         self.train_metrics["train_df_acc"].append(logits_df_acc)
-
 
         # Return the loss
         return loss

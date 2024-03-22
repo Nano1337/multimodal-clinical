@@ -139,7 +139,7 @@ class CremadDataset(Dataset):
         # label
         label = self.label[idx]
 
-        if 'qmf' in self.args.model_type:
+        if 'qmf' in self.args.model_type or 'lreg' in self.args.model_type:
             return spectrogram, images, label, idx
         return spectrogram, images, label
 

@@ -8,7 +8,7 @@ from cremad.backbone import resnet18
 
 from utils.BaseModel import JointLogitsBaseModel
 from existing_algos.QMF import QMF
-
+from existing_algos.OGM_GE import ogm_ge
 
 class FusionNet(nn.Module):
     def __init__(
@@ -65,7 +65,7 @@ class FusionNet(nn.Module):
             self.qmf.history[n].correctness_update(idx, loss_uni[n], conf[n].squeeze())
 
         loss_reg = self.qmf.reg_loss(conf, idx.squeeze())
-        loss_joint = self.loss_fn(logits_df, label)
+        loss_joint = self.loss_fn(logits_df, label) 
 
         loss = loss_joint + torch.sum(torch.stack(loss_uni)) + loss_reg
 
@@ -84,6 +84,10 @@ class MultimodalCremadModel(JointLogitsBaseModel):
         """
 
         super(MultimodalCremadModel, self).__init__(args)
+
+        self.automatic_optimization = False
+        self.ogm_modulation = self.args.grad_mod_type
+        self.ogm_alpha = self.args.alpha
 
         self.train_metrics.update({"train_df_acc": []})
         self.val_metrics.update({"val_df_acc": []})
@@ -148,6 +152,13 @@ class MultimodalCremadModel(JointLogitsBaseModel):
         self.train_metrics["train_x2_acc"].append(x2_acc_cal.item())
         self.train_metrics["train_df_acc"].append(logits_df_acc)
 
+        # apply gradient modulatiaon using OGM-GE
+        opt = self.optimizers()
+        opt.zero_grad()
+        self.manual_backward(loss)
+        if self.ogm_modulation:
+            ogm_ge(self.model, x1_logits, x2_logits, label, modulation=self.ogm_modulation, alpha=self.ogm_alpha)
+        opt.step()
 
         # Return the loss
         return loss
@@ -176,6 +187,15 @@ class MultimodalCremadModel(JointLogitsBaseModel):
         self.train_metrics["train_x1_acc"].clear()
         self.train_metrics["train_x2_acc"].clear()
         self.train_metrics["train_df_acc"].clear()
+
+        if self.args.use_scheduler:
+            schedulers = self.lr_schedulers()
+            
+            # handle single scheduler and step schedulers per epoch
+            if not isinstance(schedulers, list):
+                schedulers = [schedulers]
+            for scheduler in schedulers:
+                scheduler.step()
 
     def validation_step(self, batch, batch_idx): 
         """Validation step for the model. Logs loss and accuracy.
