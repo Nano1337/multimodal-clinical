@@ -30,7 +30,7 @@ class FusionNet(nn.Module):
         self.num_classes = self.args.num_classes
         self.loss_fn = loss_fn
 
-    def forward(self, x1_data, x2_data, label, idx, istrain=False):
+    def forward(self, x1_data, x2_data, label, idx):
         """ Forward pass for the FusionNet model. Fuses at logit level.
         
         Args:
@@ -57,32 +57,22 @@ class FusionNet(nn.Module):
         x1_logits = self.x1_classifier(a)
         x2_logits = self.x2_classifier(v)
 
-        if istrain: 
-            # fuse at logit level
-            avg_logits = (x1_logits + x2_logits) / 2
+        out = torch.stack([x1_logits, x2_logits])
+        logits_df, conf = self.qmf.df(out) # logits_df is (B, C), conf is (M, B)
+        loss_uni = []
+        for n in range(self.num_modality):
+            loss_uni.append(self.loss_fn(out[n], label))
+            self.qmf.history[n].correctness_update(idx, loss_uni[n], conf[n].squeeze())
 
-            loss = self.loss_fn(avg_logits, label)
+        loss_reg = self.qmf.reg_loss(conf, idx.squeeze())
+        loss_joint = 0 # self.loss_fn(logits_df, label)
 
-            return (x1_logits, x2_logits, avg_logits, loss)
-        
-        else: 
-            out = torch.stack([x1_logits, x2_logits])
-            logits_df, conf = self.qmf.df(out) # logits_df is (B, C), conf is (M, B)
-            loss_uni = []
-            for n in range(self.num_modality):
-                loss_uni.append(self.loss_fn(out[n], label))
-                self.qmf.history[n].correctness_update(idx, loss_uni[n], conf[n].squeeze())
+        loss = loss_joint + torch.sum(torch.stack(loss_uni)) + loss_reg
 
-            loss_reg = self.qmf.reg_loss(conf, idx.squeeze())
-            loss_joint = self.loss_fn(logits_df, label)
+        # fuse at logit level
+        avg_logits = (x1_logits + x2_logits) / 2
 
-            loss = loss_joint + torch.sum(torch.stack(loss_uni)) + loss_reg
-
-            # fuse at logit level
-            avg_logits = (x1_logits + x2_logits) / 2
-
-            return (x1_logits, x2_logits, avg_logits, loss, logits_df)
-
+        return (x1_logits, x2_logits, avg_logits, loss, logits_df)
 
 class MultimodalCremadModel(JointLogitsBaseModel): 
 
@@ -95,6 +85,7 @@ class MultimodalCremadModel(JointLogitsBaseModel):
 
         super(MultimodalCremadModel, self).__init__(args)
 
+        self.train_metrics.update({"train_df_acc": []})
         self.val_metrics.update({"val_df_acc": []})
         self.test_metrics.update({"test_df_acc": []})
 
@@ -119,7 +110,7 @@ class MultimodalCremadModel(JointLogitsBaseModel):
         x1, x2, label, idx = batch
 
         # Get predictions and loss from model
-        x1_logits, x2_logits, avg_logits, loss = self.model(x1, x2, label, idx, istrain=True)
+        x1_logits, x2_logits, avg_logits, loss, logits_df = self.model(x1, x2, label, idx)
 
         # Calculate uncalibrated accuracy for x1 and x2
         x1_acc_uncal = torch.mean((torch.argmax(x1_logits, dim=1) == label).float())
@@ -137,6 +128,7 @@ class MultimodalCremadModel(JointLogitsBaseModel):
 
         # Calculate accuracy
         joint_acc = torch.mean((torch.argmax(avg_logits, dim=1) == label).float())
+        logits_df_acc = torch.mean((torch.argmax(logits_df, dim=1) == label).float())
 
         # Log loss and accuracy
         self.log("train_step/train_loss", loss, on_step=True, on_epoch=True, prog_bar=False, logger=True)
@@ -145,6 +137,7 @@ class MultimodalCremadModel(JointLogitsBaseModel):
         self.log("train_step/train_x2_acc", x2_acc_cal, on_step=True, on_epoch=True, prog_bar=False, logger=True)
         self.log("train_step/train_x1_uncal_acc", x1_acc_uncal, on_step=True, on_epoch=True, prog_bar=False, logger=True)
         self.log("train_step/train_x2_uncal_acc", x2_acc_uncal, on_step=True, on_epoch=True, prog_bar=False, logger=True)
+        self.log("train_step/train_df_acc", logits_df_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
 
         # accumulate accuracies and losses
         self.train_metrics["train_acc"].append(joint_acc)
@@ -153,6 +146,7 @@ class MultimodalCremadModel(JointLogitsBaseModel):
         self.train_metrics["train_x2_acc_uncal"].append(x2_acc_uncal.item())
         self.train_metrics["train_x1_acc"].append(x1_acc_cal.item())
         self.train_metrics["train_x2_acc"].append(x2_acc_cal.item())
+        self.train_metrics["train_df_acc"].append(logits_df_acc)
 
         # Return the loss
         return loss
@@ -164,6 +158,7 @@ class MultimodalCremadModel(JointLogitsBaseModel):
         """
         avg_loss = torch.stack(self.train_metrics["train_loss"]).mean()
         avg_acc = torch.stack(self.train_metrics["train_acc"]).mean()
+        avg_df_acc = torch.mean(torch.stack(self.train_metrics["train_df_acc"]))
 
         self.log("train_epoch/train_avg_acc", avg_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
         self.log("train_epoch/train_avg_loss", avg_loss, on_step=False, on_epoch=True, prog_bar=False, logger=True)
@@ -171,12 +166,15 @@ class MultimodalCremadModel(JointLogitsBaseModel):
         self.log("train_epoch/train_avg_x2_acc_uncal", np.mean(np.array(self.train_metrics["train_x2_acc_uncal"])), on_step=False, on_epoch=True, prog_bar=False, logger=True)
         self.log("train_epoch/train_avg_x1_acc", np.mean(np.array(self.train_metrics["train_x1_acc"])), on_step=False, on_epoch=True, prog_bar=False, logger=True)
         self.log("train_epoch/train_avg_x2_acc", np.mean(np.array(self.train_metrics["train_x2_acc"])), on_step=False, on_epoch=True, prog_bar=False, logger=True)
+        self.log("train_epoch/train_avg_df_acc", avg_df_acc, on_step=False, on_epoch=True, prog_bar=False, logger=True)
+
         self.train_metrics["train_loss"].clear()
         self.train_metrics["train_acc"].clear()
         self.train_metrics["train_x1_acc_uncal"].clear()
         self.train_metrics["train_x2_acc_uncal"].clear()
         self.train_metrics["train_x1_acc"].clear()
         self.train_metrics["train_x2_acc"].clear()
+        self.train_metrics["train_df_acc"].clear()
 
     def validation_step(self, batch, batch_idx): 
         """Validation step for the model. Logs loss and accuracy.

@@ -85,6 +85,9 @@ def run_training():
     elif args.model_type == "qmf_ablate": 
         from cremad.joint_model_qmf_ablate import MultimodalCremadModel
         setattr(args, "num_samples", len(train_dataset))
+    elif args.model_type == "qmf_ablate_Ljoint": 
+        from cremad.joint_model_qmf_ablate_Ljoint import MultimodalCremadModel
+        setattr(args, "num_samples", len(train_dataset))
     else:   
         raise NotImplementedError("Model type not implemented")
 

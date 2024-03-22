@@ -14,7 +14,7 @@ alpha: 0.8 # recommended setting 0.8 for Crema-D
 
 # main settings that need to be checked
 use_wandb: True
-model_type: "qmf_ablate" # "ogm_ge" 
+model_type: "qmf_ablate_Ljoint" # "ogm_ge" 
 group_name: "cremad_cls6_jlogits_qmf_ablate_Ljoint" # cremad_cls6_jlogits_ogmge_alpha=0.8
 seed: 5
 use_scheduler: True  
