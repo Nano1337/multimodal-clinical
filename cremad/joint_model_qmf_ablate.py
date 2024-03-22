@@ -74,9 +74,9 @@ class FusionNet(nn.Module):
                 self.qmf.history[n].correctness_update(idx, loss_uni[n], conf[n].squeeze())
 
             loss_reg = self.qmf.reg_loss(conf, idx.squeeze())
-            loss_joint = self.loss_fn(logits_df, label)
+            loss_joint = 0 # self.loss_fn(logits_df, label) #FIXME: uncomment this later
 
-            loss = loss_joint + torch.sum(torch.stack(loss_uni)) + loss_reg
+            loss = loss_joint + torch.sum(torch.stack(loss_uni)) + loss_reg # take out loss_uni next
 
             # fuse at logit level
             avg_logits = (x1_logits + x2_logits) / 2

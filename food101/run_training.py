@@ -11,7 +11,7 @@ from pytorch_lightning import seed_everything
 from torch.utils.data import DataLoader
 
 # internal files
-from get_data import get_data, custom_collate_fn
+from food101.get_data_old import get_data, custom_collate_fn
 
 # set reproducible 
 import torch

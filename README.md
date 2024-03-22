@@ -45,7 +45,8 @@ python main.py --dir cremad
 ## Changelog
 
 March 21st: 
-- [X] - Update Crema-D non-base models to inherit from BaseModel too (move other-works specific to another dir other than utils)
+- [X] Update Crema-D non-base models to inherit from BaseModel too (move other-works specific to another dir other than utils)
+- [X] Update Crema-D with QMF and ablations
 
 March 19th:
 - [x] Update BaseModels with EMA for unimodal training accuracy calibration
