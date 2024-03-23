@@ -18,6 +18,8 @@ A Work in Progress...
 
 ## Setup
 
+NOTE: Each dataset has its own specific setup procedure. Please refer to the `_SETUP.md` file in each subdirectory for more information.
+
 To get started, create a python virtual environment and activate it
 ```bash
 python -m venv venv
@@ -34,6 +36,7 @@ Or install the requirements directly
 ```bash
 pip install -r requirements.txt
 ```
+
 
 ## Usage
 
