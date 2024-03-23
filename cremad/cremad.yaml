@@ -18,6 +18,3 @@ model_type: "ogm_ge_lreg" # "ogm_ge"
 group_name: "cremad_cls6_jlogits_ogm_ge_Lreg" 
 seed: 5
 use_scheduler: True  
-
-# experiment list: 
-# modify QMF file with OGM-GE and ablate those components
