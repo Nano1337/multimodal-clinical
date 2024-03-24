@@ -2,12 +2,13 @@ import argparse
 
 parser = argparse.ArgumentParser(description="which directory to run")
 parser.add_argument("--dir", type=str, default=None, help="directory to run")
-ar = parser.parse_args()
+arg = parser.parse_args()
 
-if ar.dir == "cremad": 
+if arg.dir == "cremad": 
     from cremad.run_trainer import run_training
-
-if ar.dir is None: 
-    raise NotImplementedError("Please specify a directory to run")
+if arg.dir == "food101":
+    from food101.run_training import run_training
 else: 
-    run_training()
+    raise NotImplementedError("Please specify a directory to run")
+
+run_training()

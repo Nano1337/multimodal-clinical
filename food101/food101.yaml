@@ -1,15 +1,14 @@
 num_classes: 101 # emotion classification
-batch_size: 768
-learning_rate: 1.0e-1 # paper starts here and decays to 1e-4
-num_epochs: 60
-dropout_p: 0.1
+batch_size: 128
+learning_rate: 1.0e-2
+num_epochs: 100
 gpus: [0]
-data_path: "../data/food101/"
+data_path: "data/food101/"
 num_cpus: 12
 
 # main settings that need to be checked
 use_wandb: True
-model_type: "jprobas_jlogits"
-group_name: "food101_cls101_jprobas_jlogits_seeds" # cremad_cls28_ensemble_seeds
+model_type: "jlogits"
+group_name: "food101_cls101_jlogits_newtest" 
 seed: 5
 use_scheduler: True

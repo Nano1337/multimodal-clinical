@@ -7,7 +7,6 @@ import yaml
 from importlib import resources 
 
 # Deep Learning Libraries
-from pytorch_lightning import seed_everything 
 from torch.utils.data import DataLoader
 
 # internal files

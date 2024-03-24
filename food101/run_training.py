@@ -2,60 +2,33 @@
 # Basic Libraries
 import os 
 import argparse
+import wandb
 import yaml
+from importlib import resources 
 
 # Deep Learning Libraries
-import pytorch_lightning as pl
-from pytorch_lightning.loggers import WandbLogger
-from pytorch_lightning import seed_everything 
 from torch.utils.data import DataLoader
 
 # internal files
-from food101.get_data_old import get_data, custom_collate_fn
+from food101.get_data import get_data
+from utils.run_trainer import run_trainer
+from utils.setup_configs import setup_configs
 
 # set reproducible 
 import torch
-torch.backends.cudnn.deterministc = True
+torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 torch.set_float32_matmul_precision('medium')
 
-DEFAULT_GPUS = [0]
-
-if __name__ == "__main__": 
-    torch.multiprocessing.set_start_method('spawn')
-
-    # load configs into args
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--config", "--configs", type=str, default=None) 
-    args = parser.parse_args()
-    if args.config:
-        with open(args.config, "r") as yaml_file:
-            cfg = yaml.safe_load(yaml_file)
-    else:
-        raise NotImplementedError
-    for key, val in cfg.items():
-        setattr(args, key, val)
-
-
-    seed_everything(args.seed, workers=True) 
-
-    # model training type
-    if args.model_type == "jlogits":
-        from joint_model import *
-    elif args.model_type == "ensemble":
-        from ensemble_model import *
-    elif args.model_type == "jprobas":
-        from joint_model_proba import *
-    elif args.model_type == "jprobas_jlogits": 
-        from joint_model_proba_logits import *
-    else:   
-        raise NotImplementedError("Model type not implemented")
-
+def run_training():
+    """ 
+    Data:
+    - batch[0] is (B, 3, 224, 224) image, modality x1
+    - batch[1] is (B, S) text, modality x2
+    - batch[2] is [B] labels, 101 food classes
     """
-    batch[0] is (B, 3, 224, 224) image, modality x1
-    batch[1] is (B, S) text, modality x2
-    batch[2] is [B] labels, 101 food classes
-    """
+
+    args = setup_configs()
 
     # datasets
     train_dataset, val_dataset, test_dataset = get_data(args)
@@ -67,8 +40,6 @@ if __name__ == "__main__":
         num_workers=args.num_cpus, 
         persistent_workers=True,
         prefetch_factor = 4,
-        collate_fn=custom_collate_fn,
-        sampler=train_dataset.balanced_sampler(),
     )
 
     val_loader = DataLoader(
@@ -77,8 +48,6 @@ if __name__ == "__main__":
         num_workers=args.num_cpus, 
         persistent_workers=True, 
         prefetch_factor=4,
-        collate_fn=custom_collate_fn, 
-        sampler=val_dataset.balanced_sampler(),
     )
 
     test_loader = DataLoader(
@@ -87,46 +56,21 @@ if __name__ == "__main__":
         num_workers=args.num_cpus, 
         persistent_workers=True, 
         prefetch_factor=4,
-        collate_fn=custom_collate_fn, 
-        sampler=test_dataset.balanced_sampler()
     )
+
+    # model training type
+    if args.model_type == "jlogits":
+        from food101.joint_model import MultimodalFoodModel
+    elif args.model_type == "ensemble":
+        from food101.ensemble_model import MultimodalFoodModel
+    elif args.model_type == "jprobas":
+        from food101.joint_model_proba import MultimodalFoodModel
+    elif args.model_type == "jprobas_jlogits": 
+        from food101.joint_model_proba_logits import MultimodalFoodModel
+    else:   
+        raise NotImplementedError("Model type not implemented")
 
     # get model
     model = MultimodalFoodModel(args)
 
-    # define trainer
-    trainer = None
-    lr_monitor = pl.callbacks.LearningRateMonitor(logging_interval='epoch')
-    wandb_logger = WandbLogger(
-        group=args.group_name,
-        )
-    if torch.cuda.is_available(): 
-        # call pytorch lightning trainer 
-        trainer = pl.Trainer(
-            strategy="auto",
-            max_epochs=args.num_epochs, 
-            logger = wandb_logger if args.use_wandb else None,
-            deterministic=True, 
-            default_root_dir="ckpts/",  
-            precision="bf16-mixed", # "bf16-mixed",
-            num_sanity_val_steps=0, # check validation 
-            log_every_n_steps=30,  
-            callbacks=[pl.callbacks.LearningRateMonitor(logging_interval='epoch')],
-            # overfit_batches=1,
-        )
-    else: 
-        raise NotImplementedError("It is not advised to train without a GPU")
-
-    trainer.fit(
-        model, 
-        train_dataloaders=train_loader, 
-        val_dataloaders=val_loader, 
-    )
-
-    trainer.test(
-        model, 
-        dataloaders=test_loader
-    )
-
-
-
+    run_trainer(args, model, train_loader, val_loader, test_loader)

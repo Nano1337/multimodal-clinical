@@ -54,8 +54,7 @@ class MultimodalFoodDataset(Dataset):
             for single_line in csv_reader:
                 item = single_line.strip().split(".jpg ")
                 token_path = os.path.join(self.text_feature_path, item[0] + '_token.npy')
-                pm_path = os.path.join(self.text_feature_path, item[0] + '_pm.npy')
-                visual_path = os.path.join(self.visual_feature_path, item[0] + ".jpg")    
+                visual_path = os.path.join(self.visual_feature_path, item[0] + ".jpg.npy")    
                 # pdb.set_trace()
                 if os.path.exists(token_path) and os.path.exists(visual_path):
                     data.append(item[0])
@@ -95,61 +94,33 @@ class MultimodalFoodDataset(Dataset):
 
         self.skip_norm = True
         self.noise = False
-        self.norm_mean = -5.081
-        self.norm_std = 4.4849
-
 
     def __len__(self): 
         return len(self.av_files)
-    
-    def get_image(self, filename, filename2=None, mix_lambda=1):
-        if filename2 == None:
-            img = Image.open(filename)
-            if self.mode == "train":
-                image_tensor = self.preprocess_train(img)
-            else:
-                image_tensor = self.preprocess_test(img)
-            return image_tensor
-        else:
-            img1 = Image.open(filename)
-            image_tensor1 = self.preprocess(img1)
-
-            img2 = Image.open(filename2)
-            image_tensor2 = self.preprocess(img2)
-
-            image_tensor = mix_lambda * image_tensor1 + (1 - mix_lambda) * image_tensor2
-            return image_tensor
 
     def __getitem__(self, idx):
         av_file = self.av_files[idx]
 
         # Text
         token_path = os.path.join(self.text_feature_path, av_file + '_token.npy')
-        pm_path = os.path.join(self.text_feature_path, av_file + '_pm.npy')
-        tokenizer = np.load(token_path)
-        padding_mask = np.load(pm_path)
-        tokenizer = torch.tensor(tokenizer)
-        padding_mask = torch.tensor(padding_mask)
+        text_token = np.load(token_path)
+        text_token = torch.tensor(text_token)
 
         # Visual
-        image = self.get_image(os.path.join(self.visual_feature_path, av_file + ".jpg"))
-
-        # normalize the input for both training and test
-        if self.skip_norm == False:
-            tokenizer = (tokenizer - self.norm_mean) / (self.norm_std)
-
-        # skip normalization the input ONLY when you are trying to get the normalization stats.
-        else:
-            pass
-
-        if self.noise == True and self.mode == "train" and self.augnois:
-            tokenizer = tokenizer + torch.rand(tokenizer.shape[0], tokenizer.shape[1]) * np.random.rand() / 10
-            tokenizer = torch.roll(tokenizer, np.random.randint(-1024, 1024), 0)
+        image_path = os.path.join(self.visual_feature_path, av_file + ".jpg.npy")
+        image = np.load(image_path)
+        image = torch.tensor(image) 
 
         label = self.classes.index(self.data2class[av_file])
         
-        return (tokenizer, padding_mask), image, label
+        return text_token, image, label
 
+def get_data(args):
+    train_dataset = MultimodalFoodDataset(args, mode='train')
+    val_dataset = MultimodalFoodDataset(args, mode='dev')
+    test_dataset = MultimodalFoodDataset(args, mode='test')
+
+    return train_dataset, val_dataset, test_dataset
 
 if __name__ == "__main__": 
     parser = argparse.ArgumentParser()
@@ -164,5 +135,5 @@ if __name__ == "__main__":
 
     batch = next(iter(train_loader))
 
-    print(batch[2])
+    print(batch[1].shape)
     
