@@ -114,7 +114,7 @@ class QMF:
         conf = energy / 10
         logits_df = logits * conf.unsqueeze(-1).detach()
 
-        return torch.sum(logits_df, dim=0), conf.detach()
+        return torch.sum(logits_df, dim=0), conf
 
     def reg_loss(self, confidence, idx):
         '''
