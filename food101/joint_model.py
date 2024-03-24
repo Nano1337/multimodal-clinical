@@ -5,6 +5,7 @@ import torch.nn.functional as F
 from transformers import AutoModel
 
 from utils.BaseModel import JointLogitsBaseModel
+from torch.optim.lr_scheduler import StepLR
 
 class MLP(nn.Module):
     def __init__(self, input_dim=768, hidden_dim=512, num_classes=101):
@@ -74,6 +75,18 @@ class MultimodalFoodModel(JointLogitsBaseModel):
 
 
         super(MultimodalFoodModel, self).__init__(args)
+
+    def configure_optimizers(self):
+        optimizer = torch.optim.SGD(self.parameters(), lr=self.args.learning_rate, momentum=0.9, weight_decay=1.0e-4)
+        if self.args.use_scheduler:
+            scheduler = {
+                'scheduler': StepLR(optimizer, step_size=15, gamma=0.5),
+                'interval': 'epoch',
+                'frequency': 1,
+            }
+            return [optimizer], [scheduler]
+            
+        return optimizer
 
     def _build_model(self):
         return FusionNet(
