@@ -49,6 +49,7 @@ python main.py --dir cremad
 
 March 25th: 
 - [X] Update Food101 and Crema-D to use factory patterns for model selection
+- [ ] Update Food101/_SETUP.md with new instructions when using M3AE model
 - [ ] Update Food101 to use M3AE model and MLA training hyperparams
  
 March 24th: 
