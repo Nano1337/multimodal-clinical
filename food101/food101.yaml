@@ -11,8 +11,8 @@ grad_mod_type: "OGM_GE" # Options: (None | 'OGM_GE' | 'OGM' | 'noise')
 alpha: 0.1 # recommended 0.1 default
 
 # main settings that need to be checked
-use_wandb: True
+use_wandb: False
 model_type: "qmf"
-group_name: "food101_cls101_ogm_ge"   
+group_name: "food101_cls101_qmf_ensemble_test"   
 seed: 5
 use_scheduler: True

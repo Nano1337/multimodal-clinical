@@ -92,6 +92,7 @@ class MultimodalFoodModel(QMFBaseModel):
 
         super(MultimodalFoodModel, self).__init__(args)
 
+
     def configure_optimizers(self):
         optimizer = torch.optim.SGD(self.parameters(), lr=self.args.learning_rate, momentum=0.9, weight_decay=1.0e-4)
         if self.args.use_scheduler:

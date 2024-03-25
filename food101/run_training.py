@@ -10,9 +10,8 @@ from importlib import resources
 from torch.utils.data import DataLoader
 
 # internal files
-
 from food101 import get_model
-from food101.get_data import get_data
+from food101.get_data import get_data, collate_fn
 from utils.run_trainer import run_trainer
 from utils.setup_configs import setup_configs
 
@@ -35,7 +34,7 @@ def run_training():
     # datasets
     train_dataset, val_dataset, test_dataset = get_data(args)
     setattr(args, "num_samples", len(train_dataset))
-    
+
     # get dataloaders
     train_loader = DataLoader(
         train_dataset,
@@ -43,6 +42,7 @@ def run_training():
         num_workers=args.num_cpus, 
         persistent_workers=True,
         prefetch_factor = 4,
+        collate_fn=collate_fn,
     )
 
     val_loader = DataLoader(
@@ -51,6 +51,7 @@ def run_training():
         num_workers=args.num_cpus, 
         persistent_workers=True, 
         prefetch_factor=4,
+        collate_fn=collate_fn,
     )
 
     test_loader = DataLoader(
@@ -59,6 +60,7 @@ def run_training():
         num_workers=args.num_cpus, 
         persistent_workers=True, 
         prefetch_factor=4,
+        collate_fn=collate_fn,
     )
 
     # get model
