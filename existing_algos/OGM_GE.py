@@ -18,8 +18,8 @@ def ogm_ge(model, out_1, out_2, label, alpha=0.1, modulation='OGM_GE'):
 
         Note: change if/continue below for different models so that only norms are skipped
     '''
-    score_v = sum([F.softmax(out_1, dim=-1)[i][label[i]] for i in range(out_1.size(0))])
-    score_a = sum([F.softmax(out_2, dim=-1)[i][label[i]] for i in range(out_2.size(0))])
+    score_v = torch.sum(torch.stack([F.softmax(out_1, dim=-1)[i][label[i]] for i in range(out_1.size(0))]))
+    score_a = torch.sum(torch.stack([F.softmax(out_2, dim=-1)[i][label[i]] for i in range(out_2.size(0))]))
 
     ratio_v = score_v / score_a
     ratio_a = 1 / ratio_v

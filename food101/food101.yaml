@@ -1,6 +1,6 @@
 num_classes: 101 # emotion classification
 batch_size: 128
-learning_rate: 0.01
+learning_rate: 0.02
 num_epochs: 60
 gpus: [0]
 data_path: "data/food101/"
