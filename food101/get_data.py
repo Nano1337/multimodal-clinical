@@ -112,7 +112,8 @@ class MultimodalFoodDataset(Dataset):
         image = torch.tensor(image) 
 
         label = self.classes.index(self.data2class[av_file])
-        
+        if 'qmf' in self.args.model_type or 'lreg' in self.args.model_type:
+            return text_token, image, label, idx
         return text_token, image, label
 
 def get_data(args):

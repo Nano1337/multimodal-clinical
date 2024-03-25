@@ -12,7 +12,7 @@ A Work in Progress...
 - [X] Crema-D (Audio, Video) for Emotion Recognition
 - [ ] Enrico (Screenshot, Wireframe) for Design Classification
 - [ ] FakeNews (Text, Image) for Fake News Detection
-- [ ] Food101 (Image, Text) for Food Classification
+- [X] Food101 (Image, Text) for Food Classification
 - [ ] MIMIC (Metadata, Timeseries) for EHR Mortality Prediction
 - [ ] VGGSound (Audio, Video) for Sound Classification
 
@@ -49,9 +49,9 @@ python main.py --dir cremad
 
 March 25th: 
 - [X] Update Food101 and Crema-D to use factory patterns for model selection
-- [ ] Update Food101/_SETUP.md with new instructions when using M3AE model
-- [ ] Update Food101 to use M3AE model and MLA training hyperparams
- 
+- [X] Update Food101/_SETUP.md with new instructions when using M3AE model
+- [X] Update Food101 with QMF and refactor QMF as a base model
+
 March 24th: 
 - [X] Update Crema-D with QMF and ablations
 - [X] Update Crema-D with OGM-GE and ablations
@@ -69,9 +69,7 @@ March 19th:
 - [x] Encapsulate lightning trainer logic into utils
 - [x] Update YAMLs to override a base config file
 
-
 ### TODO: 
-- Create a QMFBaseModel and integrate into cremad and food101
 - Update every run_training.py file for config, mode, and trainer encapsulation
 - Update every model file to inherit from BaseModels
 - Do more HPO/read other paper configs to improve baseline perf

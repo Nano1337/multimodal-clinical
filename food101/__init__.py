@@ -10,6 +10,8 @@ def get_model(args):
         from food101.joint_model_proba_logits import MultimodalFoodModel
     elif args.model_type == "ogm_ge": 
         from food101.joint_model_ogm_ge import MultimodalFoodModel
+    elif args.model_type == "qmf": 
+        from food101.joint_model_qmf import MultimodalFoodModel
     else:   
         raise NotImplementedError("Model type not implemented")
 
