@@ -10,6 +10,8 @@ from importlib import resources
 from torch.utils.data import DataLoader
 
 # internal files
+
+from food101 import get_model
 from food101.get_data import get_data
 from utils.run_trainer import run_trainer
 from utils.setup_configs import setup_configs
@@ -32,7 +34,8 @@ def run_training():
 
     # datasets
     train_dataset, val_dataset, test_dataset = get_data(args)
-
+    setattr(args, "num_samples", len(train_dataset))
+    
     # get dataloaders
     train_loader = DataLoader(
         train_dataset,
@@ -58,19 +61,7 @@ def run_training():
         prefetch_factor=4,
     )
 
-    # model training type
-    if args.model_type == "jlogits":
-        from food101.joint_model import MultimodalFoodModel
-    elif args.model_type == "ensemble":
-        from food101.ensemble_model import MultimodalFoodModel
-    elif args.model_type == "jprobas":
-        from food101.joint_model_proba import MultimodalFoodModel
-    elif args.model_type == "jprobas_jlogits": 
-        from food101.joint_model_proba_logits import MultimodalFoodModel
-    else:   
-        raise NotImplementedError("Model type not implemented")
-
     # get model
-    model = MultimodalFoodModel(args)
+    model = get_model(args)
 
     run_trainer(args, model, train_loader, val_loader, test_loader)

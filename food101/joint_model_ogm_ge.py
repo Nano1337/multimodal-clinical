@@ -2,10 +2,11 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from utils.BaseModel import EnsembleBaseModel
-
 from transformers import AutoModel
+
+from utils.BaseModel import OGMGEBaseModel
 from torch.optim.lr_scheduler import StepLR
+
 
 class MLP(nn.Module):
     def __init__(self, input_dim=768, hidden_dim=512, num_classes=101):
@@ -57,13 +58,14 @@ class FusionNet(nn.Module):
         x1_logits = self.x1_model(output['text_embeds'])
         x2_logits = self.x2_model(output['image_embeds'])
 
+        # fuse at logit level
+        avg_logits = (x1_logits + x2_logits) / 2
 
-        x1_loss = self.loss_fn(x1_logits, label)
-        x2_loss = self.loss_fn(x2_logits, label)
+        loss = self.loss_fn(avg_logits, label)
 
-        return (x1_logits, x2_logits, x1_loss, x2_loss)
+        return (x1_logits, x2_logits, avg_logits, loss)
 
-class MultimodalFoodModel(EnsembleBaseModel): 
+class MultimodalFoodModel(OGMGEBaseModel): 
 
     def __init__(self, args): 
         """Initialize MultimodalFoodModel.
@@ -85,7 +87,7 @@ class MultimodalFoodModel(EnsembleBaseModel):
             return [optimizer], [scheduler]
             
         return optimizer
-    
+
     def _build_model(self):
         return FusionNet(
             num_classes=self.args.num_classes, 

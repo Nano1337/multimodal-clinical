@@ -10,6 +10,7 @@ from importlib import resources
 from torch.utils.data import DataLoader
 
 # internal files
+from cremad import get_model
 from cremad.get_data import get_data, make_balanced_sampler
 from utils.run_trainer import run_trainer
 from utils.setup_configs import setup_configs
@@ -33,6 +34,7 @@ def run_training():
 
     # datasets
     train_dataset, val_dataset, test_dataset = get_data(args)
+    setattr(args, "num_samples", len(train_dataset))
 
     # get dataloaders
     train_sampler = make_balanced_sampler(train_dataset.label)
@@ -67,37 +69,7 @@ def run_training():
         collate_fn=train_dataset.custom_collate, 
     )
 
-    # model training type
-    if args.model_type == "jlogits":
-        from cremad.joint_model import MultimodalCremadModel
-    elif args.model_type == "ensemble":
-        from cremad.ensemble_model import MultimodalCremadModel
-    elif args.model_type == "jprobas":
-        from cremad.joint_model_proba import MultimodalCremadModel
-    elif args.model_type == "ogm_ge": 
-        from cremad.joint_model_ogm_ge import MultimodalCremadModel
-    elif args.model_type == "ensemble_ogm_ge": 
-        from cremad.ensemble_model_noised import MultimodalCremadModel
-    elif args.model_type == "qmf": 
-        from cremad.joint_model_qmf import MultimodalCremadModel
-        setattr(args, "num_samples", len(train_dataset))
-    elif args.model_type == "qmf_ablate": 
-        from cremad.joint_model_qmf_ablate import MultimodalCremadModel
-        setattr(args, "num_samples", len(train_dataset))
-    elif args.model_type == "qmf_ablate_Ljoint": 
-        from cremad.joint_model_qmf_ablate_Ljoint import MultimodalCremadModel
-        setattr(args, "num_samples", len(train_dataset))
-    elif args.model_type == "qmf_ablate_Lunimodal": 
-        from cremad.joint_model_qmf_ablate_Lunimodal import MultimodalCremadModel
-        setattr(args, "num_samples", len(train_dataset))
-    elif args.model_type == "ogm_ge_lreg": 
-        from cremad.joint_model_ogm_ge_lreg import MultimodalCremadModel
-        setattr(args, "num_samples", len(train_dataset))
-    else:   
-        raise NotImplementedError("Model type not implemented")
-
-    # get model
-    model = MultimodalCremadModel(args)
+    model = get_model(args)
 
     # start training
     run_trainer(args, model, train_loader, val_loader, test_loader)

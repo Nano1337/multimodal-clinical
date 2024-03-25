@@ -13,3 +13,7 @@ model_type: "jlogits" # Options: ('jlogits' | 'ensemble' | 'ensemble' | [custom]
 group_name: "test" # str: name of the group for wandb logging and checkpoint folder naming
 seed: 5 # random seed for reproducibility
 use_scheduler: True # bool: whether to use a learning rate scheduler (can override in model file)
+
+# OGM-GE settings
+grad_mod_type: "OGM_GE" # Options: (None | 'OGM_GE' | 'OGM' | 'noise') 
+alpha: 0.1 # recommended 0.1 default

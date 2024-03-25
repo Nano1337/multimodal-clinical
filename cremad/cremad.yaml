@@ -13,8 +13,8 @@ alpha: 0.8 # recommended setting 0.8 for Crema-D
 
 
 # main settings that need to be checked
-use_wandb: True
-model_type: "ogm_ge_lreg" # "ogm_ge" 
+use_wandb: False
+model_type: "ogm_ge" # "ogm_ge" 
 group_name: "cremad_cls6_jlogits_ogm_ge_Lreg" 
 seed: 5
 use_scheduler: True  

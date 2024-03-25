@@ -6,9 +6,13 @@ gpus: [0]
 data_path: "data/food101/"
 num_cpus: 12
 
+# OGM-GE settings
+grad_mod_type: "OGM_GE" # Options: (None | 'OGM_GE' | 'OGM' | 'noise') 
+alpha: 0.1 # recommended 0.1 default
+
 # main settings that need to be checked
-use_wandb: True
-model_type: "jlogits"
-group_name: "food101_cls101_jlogits_hpo_again" 
+use_wandb: False
+model_type: "ogm_ge"
+group_name: "food101_cls101_ogm_ge" 
 seed: 5
 use_scheduler: True

@@ -47,6 +47,15 @@ python main.py --dir cremad
 
 ## Changelog
 
+March 25th: 
+- [X] Update Food101 and Crema-D to use factory patterns for model selection
+- [ ] Update Food101 to use M3AE model and MLA training hyperparams
+ 
+March 24th: 
+- [X] Update Crema-D with QMF and ablations
+- [X] Update Crema-D with OGM-GE and ablations
+- [X] Use SigLIP model as backbone for Food101 training
+
 March 21st: 
 - [X] Update Crema-D non-base models to inherit from BaseModel too (move other-works specific to another dir other than utils)
 - [X] Update Crema-D with QMF and ablations
@@ -61,12 +70,9 @@ March 19th:
 
 
 ### TODO: 
-
-Rest of Week:
-
-- Implement QMF for Crema-D
-- Update every run_training.py file for config and trainer encapsulation
-- Update every model file to inherit from BaseModel (done with Crema-D)
+- Create a QMFBaseModel and integrate into cremad and food101
+- Update every run_training.py file for config, mode, and trainer encapsulation
+- Update every model file to inherit from BaseModels
 - Do more HPO/read other paper configs to improve baseline perf
 - Incorporate OGM-GE testing to every dataset
 - Incorporate QMF testing to every dataset
