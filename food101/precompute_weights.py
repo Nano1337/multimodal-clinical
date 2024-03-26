@@ -2,7 +2,8 @@ import os
 import numpy as np
 from scipy.stats import multivariate_normal
 from cuml import UMAP
-from scipy.stats import zscore
+from cuml.cluster import KMeans
+from sklearn.metrics.pairwise import cosine_similarity
 
 class EmbeddingStats:
     def __init__(self, text_embeds, image_embeds, labels, classes):
@@ -15,16 +16,11 @@ class EmbeddingStats:
         self.num_samples = self.text_embeds.shape[0]
         self.num_modalities = 2  # Text and image modalities
 
-        self.calculate_stats()
+        self.reduce_dim()
 
-    def scale_umap_outputs(self, umap_outputs):
-        # Standardize to have mean 0 and standard deviation 1
-        standardized_outputs = zscore(umap_outputs, axis=0)
-        # Clip values to lie within [-2, 2]
-        clipped_outputs = np.clip(standardized_outputs, -2, 2)
-        return clipped_outputs
+    
 
-    def calculate_stats(self):
+    def reduce_dim(self):
         # Normalize embeddings into unit vectors to use cosine distance
         self.modality_embeddings = [embeds / np.linalg.norm(embeds, axis=-1, keepdims=True) for embeds in self.modality_embeddings]
         all_embeds = np.concatenate(self.modality_embeddings)
@@ -32,68 +28,37 @@ class EmbeddingStats:
         # Perform UMAP dimensionality reduction
         reducer = UMAP(n_components=160, metric="cosine")
         reducer.fit(all_embeds)
-
-        self.class_cond_means = []
-        self.class_cond_covars = []
-        self.class_agn_mean = []
-        self.class_agn_covar = []
         dim_reduced_embeds = []
 
         for k, modality_embeds in enumerate(self.modality_embeddings):
             print(f"Modality {k} embeddings shape before UMAP: {modality_embeds.shape}")
             modality_embeds = reducer.transform(modality_embeds.reshape(modality_embeds.shape[0], -1))
-            modality_embeds = self.scale_umap_outputs(modality_embeds)
+            modality_embeds = modality_embeds / np.linalg.norm(modality_embeds, axis=-1, keepdims=True)
             dim_reduced_embeds.append(modality_embeds)
             print(f"Modality {k} embeddings shape after UMAP: {modality_embeds.shape}")
 
-            # Class-conditional means and covariances
-            class_cond_means = []
-            class_cond_covars = []
-            for c in range(self.num_classes):
-                class_embeds = np.array([embed for embed, label in zip(modality_embeds, self.labels) if label == c])
-                class_cond_means.append(np.mean(class_embeds, axis=0))
-                class_cond_covars.append(np.cov(np.stack(class_embeds, axis=0).T, bias=True))
-
-            self.class_cond_means.append(class_cond_means)
-            self.class_cond_covars.append(class_cond_covars)
-
-            # Class-agnostic mean and covariance
-            self.class_agn_mean.append(np.mean(modality_embeds, axis=0))
-            self.class_agn_covar.append(np.cov(np.stack(modality_embeds, axis=0).T, bias=True))
-
         self.modality_embeddings = np.array(dim_reduced_embeds)
-        self.calculate_rmds()
+        self.calculate_kmeans()
 
-    def calculate_rmds(self):
-        self.rmds = []
-        for k, modality_embeds in enumerate(self.modality_embeddings):
-            class_cond_means = self.class_cond_means[k]
-            class_agm_mean = self.class_agn_mean[k]
-            # Invert class-conditional covariance matrices
-            class_cond_covars_inv = [np.linalg.pinv(cov + 1e-8 * np.eye(cov.shape[0])) for cov in self.class_cond_covars[k]]
-            class_agm_covar_inv = np.linalg.pinv(self.class_agn_covar[k] + 1e-8 * np.eye(self.class_agn_covar[k].shape[0]))
-            # Invert class-agnostic covariance matrix
-            class_agn_covar_inv = np.linalg.pinv(self.class_agn_covar + 1e-8 * np.eye(self.class_agn_covar.shape[0]))
+    def calculate_kmeans(self):
+        self.kmds = []
 
-            rmds = []
-            for embed, label in zip(modality_embeds, self.labels):
-                # Compute Relative Mahalanobis Distances (RMDs)
-                diff_class_cond = embed - class_cond_means[label]
-                diff_class_agn = embed - self.class_agn_mean
-                M_class_cond = -np.dot(diff_class_cond.T, np.dot(class_cond_covars_inv[label], diff_class_cond))
-                M_class_agn = -np.dot(diff_class_agn.T, np.dot(class_agn_covar_inv, diff_class_agn))
-                rmd = M_class_cond - M_class_agn
-                rmds.append(rmd)
-
-            self.rmds.append(rmds)
+        kmeans = KMeans(n_clusters=self.num_classes, random_state=42)
+        for modality_embeds in self.modality_embeddings:
+            output = kmeans.fit(modality_embeds)
+            centroids = output.cluster_centers_
+            similarity = cosine_similarity(modality_embeds, centroids)
+            closest = np.argmax(similarity, axis=1)
+            distances = np.array([1 - similarity[i, closest[i]] for i in range(len(modality_embeds))])
+            self.kmds.append(distances)
 
     def get_confidence_scores(self, temperature=1.0, epsilon=1e-12):
         confidence_scores = []
         calibrated_scores = []
-        for k, rmds in enumerate(self.rmds):
-            scaled_rmds = [rmd / temperature for rmd in rmds]
-            max_scaled_rmd = max(scaled_rmds)
-            modality_scores = [np.exp(rmd - max_scaled_rmd) / (np.exp(max_scaled_rmd) + epsilon) for rmd in scaled_rmds]
+        for kmds in self.kmds:
+            scaled_kmds = [kmd / temperature for kmd in kmds]
+            max_scaled_kmd = np.max(scaled_kmds)
+            modality_scores = [np.exp(kmd - max_scaled_kmd) / (np.exp(max_scaled_kmd) + epsilon) for kmd in scaled_kmds]
             confidence_scores.append(modality_scores)
 
         # Calibration step
@@ -157,7 +122,7 @@ def precompute_weights(data_path, mode):
     embedding_stats = EmbeddingStats(text_embeds, image_embeds, labels, classes)
     output = embedding_stats.get_confidence_scores()
 
-    print("Sample output weights:", output[:10])
+    print("Sample output weights:", output[:100])
     exit()
     weights_path = os.path.join(data_path, f"weights_{mode}.npy")
     np.save(weights_path, np.array(output))
