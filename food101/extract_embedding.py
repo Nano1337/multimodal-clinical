@@ -18,10 +18,10 @@ if __name__ == "__main__":
 
     json_dir = "/home/haoli/Documents/multimodal-clinical/data/food101/"
 
-    text_target_dir = os.path.join(json_dir, "text_token")
+    text_target_dir = os.path.join(json_dir, "text_embed")
     
     # img_source_dir = os.path.join(json_dir, "data")
-    img_target_dir = os.path.join(json_dir, "visual")
+    img_target_dir = os.path.join(json_dir, "image_embed")
 
     # Ensure the directory exists
     os.makedirs(text_target_dir, exist_ok=True)
@@ -43,15 +43,18 @@ if __name__ == "__main__":
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
         for cap_index, caption in tqdm(enumerate(data_texts)):
-
-            model = model.to(device)
+            with torch.no_grad():
+                model = model.to(device)
 
             img_source = os.path.join(json_dir, img_list[cap_index])
             image = Image.open(img_source)
 
             inputs = processor(text=caption, images=image, padding="max_length", return_tensors="pt", truncation=True)
-            text_tokens = inputs['input_ids'].cpu().numpy()[0, :] # index 0 because only processing one data point at a time
-            img_tokens = inputs['pixel_values'].cpu().numpy()[0, :]
+
+            inputs = {k: v.to(device) for k, v in inputs.items()}
+            output = model(**inputs)
+            text_embeds = output['text_embeds']
+            image_embeds = output['image_embeds']
 
             spec_name = img_list[cap_index].split("/")[-1].split(".jpg")[0]
 
@@ -65,7 +68,10 @@ if __name__ == "__main__":
                                            "{}_token.npy".format(spec_name))
             img_target = os.path.join(tmp_image_dir, img_list[cap_index].split("/")[-1])
         
-            np.save(token_save_path, text_tokens)
-            np.save(img_target, img_tokens)
+            text_embeds = text_embeds.cpu().detach().numpy()
+            image_embeds = image_embeds.cpu().detach().numpy()
+
+            np.save(token_save_path, text_embeds)
+            np.save(img_target, image_embeds)
 
     print("Done!")

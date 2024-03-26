@@ -58,7 +58,7 @@ class MultimodalFoodDataset(Dataset):
                 # pdb.set_trace()
                 if os.path.exists(token_path) and os.path.exists(visual_path):
                     data.append(item[0])
-                    
+                    data2class[item[0]] = item[1]
                 else:
                     continue
 
