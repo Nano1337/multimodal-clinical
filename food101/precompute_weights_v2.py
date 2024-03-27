@@ -2,17 +2,21 @@ import os
 import numpy as np
 from cuml.cluster import KMeans
 from sklearn.metrics.pairwise import cosine_similarity
-
+np.set_printoptions(threshold=np.inf, linewidth=np.inf)
 class EmbeddingStats:
     def __init__(self, text_embeds, image_embeds, labels, classes):
         self.text_embeds = np.array(text_embeds)[:, 0, :]
         self.image_embeds = np.array(image_embeds)[:, 0, :]
         self.modality_embeddings = [self.text_embeds, self.image_embeds]
-        self.labels = labels
+        self.labels = np.array(labels)
         self.classes = classes
         self.num_classes = len(classes)
         self.num_samples = self.text_embeds.shape[0]
         self.num_modalities = 2  # Text and image modalities
+
+        # hyperparameter
+        self.alpha = 3.0
+
 
         self.calc_distance()
 
@@ -20,37 +24,58 @@ class EmbeddingStats:
         print("Normalizing embeddings")
         # Normalize embeddings into unit vectors to use cosine distance
         self.modality_embeddings = [embeds / np.linalg.norm(embeds, axis=-1, keepdims=True) for embeds in self.modality_embeddings]
+        modality_embeds = np.stack(self.modality_embeddings)
+        print(f"Modality embeddings shape: {modality_embeds.shape}")
+        print(f"Labels shape: {self.labels.shape}")
 
         # calculate the class conditional mean embedding for each modality 
-        class_conditional_means = []
-        for modality_embeds in self.modality_embeddings:
-            means = np.zeros((self.num_classes, modality_embeds.shape[1]))
-            for i, class_label in enumerate(self.classes):
-                class_indices = np.where(self.labels == class_label)[0]
-                print(f"Class {class_label} has {len(class_indices)} samples.")  # Debug print
-                if len(class_indices) > 0:
-                    class_embeds = modality_embeds[class_indices]
-                    means[i] = np.mean(class_embeds, axis=0)
-                else:
-                    print(f"No embeddings found for class {class_label}.")  # Highlight empty classes
-                class_embeds = modality_embeds[class_indices]
-                means[i] = np.mean(class_embeds, axis=0)
-            class_conditional_means.append(means)
-        class_conditional_means = np.array(class_conditional_means)
-        print(class_conditional_means.shape)
-        exit()
+        class_cond_means = np.zeros((self.num_modalities, self.num_classes, modality_embeds.shape[-1]))
+        for i in range(self.num_modalities):
+            for j in range(self.num_classes):
+                class_cond_means[i, j] = np.mean(modality_embeds[i, self.labels == j], axis=0)
 
+        # calculate the cosine distance between each embedding and the class conditional mean
+        # TODO: can definitely make this code more vectorized
+        self.kmds = np.zeros((self.num_modalities, self.num_samples))
+        for i in range(self.num_modalities):
+            unimodal_class_cond_means = class_cond_means[i]
+            for j in range(self.num_classes):   
+                class_modality_embeds = modality_embeds[i, self.labels == j]
+                unimodal_class_mean = unimodal_class_cond_means[j]
+                # calculate cosine sim and put into kmds at original sample index
+                cos_sim = cosine_similarity(class_modality_embeds, unimodal_class_mean.reshape(1, -1))
+                self.kmds[i, self.labels == j] = 1 - cos_sim.flatten()
 
-        dim_reduced_embeds = []
+        self.kmds = self.kmds.T
 
-        for k, modality_embeds in enumerate(self.modality_embeddings):
-            print(f"Modality {k} embeddings shape before UMAP: {modality_embeds.shape}")
-            modality_embeds = modality_embeds / np.linalg.norm(modality_embeds, axis=-1, keepdims=True)
-            dim_reduced_embeds.append(modality_embeds)
-            print(f"Modality {k} embeddings shape after UMAP: {modality_embeds.shape}")
+        self.kmds = np.exp(-self.alpha * self.kmds)
+        for i in range(self.num_classes): 
+            self.plot_scatter(i)
+            
+    def plot_scatter(self, class_index=100):
+        import matplotlib.pyplot as plt
+        plt.figure()  # Ensure a new figure is created for each method call
 
-        self.modality_embeddings = np.array(dim_reduced_embeds)
+        if class_index is not None:
+            mask = self.labels == class_index
+            kmds_filtered = self.kmds[mask]
+            labels_filtered = self.labels[mask]
+        else:
+            kmds_filtered = self.kmds
+            labels_filtered = self.labels
 
+        # Scatter plot of kmds_filtered values colored by labels_filtered
+        plt.scatter(kmds_filtered[:, 0], kmds_filtered[:, 1], c=labels_filtered, cmap='viridis')
+
+        plt.xlabel('Text Modality Distance')
+        plt.ylabel('Image Modality Distance')
+        title = 'Scatter Plot of KMDs by Label'
+        if class_index is not None:
+            title += f' for Class {class_index}'
+        plt.title(title)
+        plt.colorbar(label='Label')
+        plt.savefig(f'figs/scatter_plot_kmds_by_label{"_class_" + str(class_index) if class_index is not None else ""}.png')
+        plt.close()  # Close the figure to free up memory
 
 
     def get_confidence_scores(self, temperature=0.7, epsilon=1e-12):
@@ -128,14 +153,15 @@ def precompute_weights(data_path, mode):
         labels.extend(batch_labels)
 
     embedding_stats = EmbeddingStats(text_embeds, image_embeds, labels, classes)
-    output = embedding_stats.get_confidence_scores()
+    # output = embedding_stats.get_confidence_scores()
 
-    count_less = sum(1 for score_pair in output if score_pair[0] < score_pair[1])
-    print(f"Number of instances where the first number is less than the second: {count_less}")
+    # count_less = sum(1 for score_pair in output if score_pair[0] < score_pair[1])
+    # print(f"Number of instances where the first number is less than the second: {count_less}")
     
-    print("Sample output weights:", output[:50])
-    weights_path = os.path.join(data_path, f"weights_{mode}.npy")
-    np.save(weights_path, np.array(output))   
+    # print("Sample output weights:", output[:50])
+    # exit()
+    # weights_path = os.path.join(data_path, f"weights_{mode}.npy")
+    # np.save(weights_path, np.array(output))   
 
 if __name__ == "__main__":
     data_path = "../data/food101/"
