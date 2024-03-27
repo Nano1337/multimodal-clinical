@@ -11,7 +11,6 @@ from torch.utils.data import DataLoader
 
 # internal files
 from food101 import get_model
-from food101.get_data import get_data
 from utils.run_trainer import run_trainer
 from utils.setup_configs import setup_configs
 
@@ -30,6 +29,10 @@ def run_training():
     """
 
     args = setup_configs()
+    if args.model_type == "sample_loss":
+        from food101.get_data_embed import get_data
+    else: 
+        from food101.get_data import get_data
 
     # datasets
     train_dataset, val_dataset, test_dataset = get_data(args)

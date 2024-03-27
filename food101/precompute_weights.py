@@ -26,13 +26,13 @@ class EmbeddingStats:
         all_embeds = np.concatenate(self.modality_embeddings)
 
         # Perform UMAP dimensionality reduction
-        reducer = UMAP(n_components=160, metric="cosine")
-        reducer.fit(all_embeds)
+        # reducer = UMAP(n_components=500, metric="cosine")
+        # reducer.fit(all_embeds)
         dim_reduced_embeds = []
 
         for k, modality_embeds in enumerate(self.modality_embeddings):
             print(f"Modality {k} embeddings shape before UMAP: {modality_embeds.shape}")
-            modality_embeds = reducer.transform(modality_embeds.reshape(modality_embeds.shape[0], -1))
+            # modality_embeds = reducer.transform(modality_embeds.reshape(modality_embeds.shape[0], -1))
             modality_embeds = modality_embeds / np.linalg.norm(modality_embeds, axis=-1, keepdims=True)
             dim_reduced_embeds.append(modality_embeds)
             print(f"Modality {k} embeddings shape after UMAP: {modality_embeds.shape}")
@@ -52,20 +52,19 @@ class EmbeddingStats:
             distances = np.array([1 - similarity[i, closest[i]] for i in range(len(modality_embeds))])
             self.kmds.append(distances)
 
-    def get_confidence_scores(self, temperature=1.0, epsilon=1e-12):
-        confidence_scores = []
-        calibrated_scores = []
-        for kmds in self.kmds:
-            scaled_kmds = [kmd / temperature for kmd in kmds]
-            max_scaled_kmd = np.max(scaled_kmds)
-            modality_scores = [np.exp(kmd - max_scaled_kmd) / (np.exp(max_scaled_kmd) + epsilon) for kmd in scaled_kmds]
-            confidence_scores.append(modality_scores)
 
-        # Calibration step
-        for i in range(len(self.text_embeds)):
-            max_modality_score = max(confidence_scores[k][i] for k in range(self.num_modalities))
-            calibrated_scores.append([score / (max_modality_score + epsilon) for score in [confidence_scores[k][i] for k in range(self.num_modalities)]])
+    def get_confidence_scores(self, temperature=0.7, epsilon=1e-12):
+        # Vectorized computation of scaled_kmds and modality_scores
+        scaled_kmds = np.array(self.kmds) / temperature
+        max_scaled_kmd = np.max(scaled_kmds, axis=0, keepdims=True)
+        modality_scores = np.exp(scaled_kmds - max_scaled_kmd) / (np.exp(max_scaled_kmd) + epsilon)
 
+        confidence_scores = modality_scores.T  # Transpose to match the desired shape
+        
+        # Vectorized computation of calibrated_scores
+        max_modality_score = np.max(confidence_scores, axis=1, keepdims=True)
+        calibrated_scores = confidence_scores / (max_modality_score + epsilon)
+        
         return calibrated_scores
 
 def precompute_weights(data_path, mode):
@@ -122,8 +121,10 @@ def precompute_weights(data_path, mode):
     embedding_stats = EmbeddingStats(text_embeds, image_embeds, labels, classes)
     output = embedding_stats.get_confidence_scores()
 
-    print("Sample output weights:", output[:100])
-    exit()
+    count_less = sum(1 for score_pair in output if score_pair[0] < score_pair[1])
+    print(f"Number of instances where the first number is less than the second: {count_less}")
+    
+    print("Sample output weights:", output[:50])
     weights_path = os.path.join(data_path, f"weights_{mode}.npy")
     np.save(weights_path, np.array(output))
 

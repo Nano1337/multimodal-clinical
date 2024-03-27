@@ -35,6 +35,13 @@ class MultimodalFoodDataset(Dataset):
         self.dev_txt = os.path.join(self.data_path, "my_dev_food.txt")
         self.test_txt = os.path.join(self.data_path, "my_test_food.txt")
 
+        self.weights_path = os.path.join(self.data_path, 'weights_train.npy')
+        if os.path.exists(self.weights_path):
+            self.weights = np.load(self.weights_path)
+        else:
+            raise FileNotFoundError(f"Weights file not found: {self.weights_path}")
+
+
         with open(self.stat_path, "r") as f1:
             classes = f1.readlines()
         
@@ -112,8 +119,11 @@ class MultimodalFoodDataset(Dataset):
         image = torch.tensor(image) 
 
         label = self.classes.index(self.data2class[av_file])
+        weight = self.weights[idx]
         if 'qmf' in self.args.model_type or 'lreg' in self.args.model_type:
             return text_token, image, label, idx
+        if 'sample_loss' in self.args.model_type:
+            return text_token, image, label, weight
         return text_token, image, label
 
 def get_data(args):
@@ -127,6 +137,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     args = parser.parse_args()
     setattr(args, "data_path", "../data/food101/")
+    setattr(args, "model_type", "sample_loss")
     dataset = MultimodalFoodDataset(args, mode='train')
 
     train_loader = DataLoader(
@@ -136,5 +147,5 @@ if __name__ == "__main__":
 
     batch = next(iter(train_loader))
 
-    print(batch[1].shape)
+    print(batch[3].shape)
     
