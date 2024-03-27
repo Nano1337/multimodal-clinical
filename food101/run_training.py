@@ -29,7 +29,7 @@ def run_training():
     """
 
     args = setup_configs()
-    if args.model_type == "sample_loss":
+    if "sample_loss" in args.model_type:
         from food101.get_data_embed import get_data
     else: 
         from food101.get_data import get_data

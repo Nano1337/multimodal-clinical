@@ -14,6 +14,8 @@ def get_model(args):
         from food101.joint_model_qmf import MultimodalFoodModel
     elif args.model_type == "sample_loss": 
         from food101.joint_model_sample_loss import MultimodalFoodModel
+    elif args.model_type == "ensemble_sample_loss":
+        from food101.ensemble_model_sample_loss import MultimodalFoodModel
     else:   
         raise NotImplementedError("Model type not implemented")
 

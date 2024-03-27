@@ -61,8 +61,8 @@ def run_trainer(args, model, train_loader, val_loader, test_loader, overfit_batc
         train_dataloaders=train_loader, 
         val_dataloaders=val_loader, 
     )
-
-    model.load_state_dict(torch.load(checkpoint_logger.best_model_path)["state_dict"])
+    # path = "/home/haoli/Documents/multimodal-clinical/data/food101/_ckpts/food101_cls101_sample_loss/robust-voice-372_best.ckpt"
+    model.load_state_dict(torch.load(checkpoint_logger.best_model_path)["state_dict"]) # checkpoint_logger.best_model_path
 
     trainer.test(
         model, 

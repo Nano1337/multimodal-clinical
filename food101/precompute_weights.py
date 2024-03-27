@@ -126,7 +126,7 @@ def precompute_weights(data_path, mode):
     
     print("Sample output weights:", output[:50])
     weights_path = os.path.join(data_path, f"weights_{mode}.npy")
-    np.save(weights_path, np.array(output))
+    np.save(weights_path, np.array(output))   
 
 if __name__ == "__main__":
     data_path = "../data/food101/"
