@@ -48,8 +48,13 @@ class EmbeddingStats:
 
         self.kmds = self.kmds.T
 
-        self.kmds = np.exp(-self.alpha * self.kmds)
+        self.kmds = 1 - np.exp(-self.alpha * self.kmds)
 
+        np.save("weights.npy", self.kmds)
+
+
+        print(self.kmds[:100])
+        exit()
         # visualize kmds scatter plots per class
         # for i in range(self.num_classes): 
         #     self.plot_scatter(i)

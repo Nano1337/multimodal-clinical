@@ -139,3 +139,4 @@ class QMF:
             ranking_loss.append(rl)
 
         return torch.sum(torch.stack(ranking_loss))
+    

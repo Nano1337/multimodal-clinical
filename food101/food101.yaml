@@ -12,8 +12,8 @@ alpha: 0.1 # recommended 0.1 default
 
 # main settings that need to be checked
 use_wandb: True
-model_type: "ensemble_sample_loss"
-group_name: "food101_cls101_sample_loss_ensemble"   
+model_type: "qmf"
+group_name: "food101_cls101_ensemble_weighted_ce_qmf_test"   
 seed: 5
 use_scheduler: True
-
+test_model_path: "/home/haoli/Documents/multimodal-clinical/data/food101/_ckpts/food101_cls101_ensemble_weighted_ce/giddy-wind-379_best.ckpt"

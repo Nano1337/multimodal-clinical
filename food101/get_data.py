@@ -58,13 +58,28 @@ class MultimodalFoodDataset(Dataset):
                 # pdb.set_trace()
                 if os.path.exists(token_path) and os.path.exists(visual_path):
                     data.append(item[0])
-                    
+                    data2class[item[0]] = item[1]
                 else:
                     continue
 
         self.classes = sorted(classes)
 
         self.data2class = data2class
+
+
+        if mode == "train":
+            mask_path = "/home/haoli/Documents/multimodal-clinical/food101/combined_filter.npy"
+            mask = np.load(mask_path)
+            if mask is not None:
+                if len(mask) != len(data):
+                    raise ValueError("Mask length must match the number of samples")
+                # Filter data based on the mask
+                filtered_data = []
+                for i, include in enumerate(mask):
+                    if include:
+                        filtered_data.append(data[i])
+                data = filtered_data
+
 
         self.av_files = []
         for item in data:

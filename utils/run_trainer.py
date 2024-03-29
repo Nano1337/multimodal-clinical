@@ -56,13 +56,16 @@ def run_trainer(args, model, train_loader, val_loader, test_loader, overfit_batc
     else: 
         raise NotImplementedError("It is not advised to train without a GPU")
 
-    trainer.fit(
-        model, 
-        train_dataloaders=train_loader, 
-        val_dataloaders=val_loader, 
-    )
-    # path = "/home/haoli/Documents/multimodal-clinical/data/food101/_ckpts/food101_cls101_sample_loss/robust-voice-372_best.ckpt"
-    model.load_state_dict(torch.load(checkpoint_logger.best_model_path)["state_dict"]) # checkpoint_logger.best_model_path
+    if args.test_model_path is None:
+        trainer.fit(
+            model, 
+            train_dataloaders=train_loader, 
+            val_dataloaders=val_loader, 
+        )
+
+    model.load_state_dict(torch.load(
+        args.test_model_path if args.test_model_path else checkpoint_logger.best_model_path 
+        )["state_dict"]) # checkpoint_logger.best_model_path
 
     trainer.test(
         model, 

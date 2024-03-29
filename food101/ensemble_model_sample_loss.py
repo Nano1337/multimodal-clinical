@@ -33,20 +33,15 @@ class FusionNet(nn.Module):
 
         self.num_classes = num_classes
         self.loss_fn = loss_fn
+        self.test_loss_fn = nn.CrossEntropyLoss()
         self.model = AutoModel.from_pretrained("google/siglip-base-patch16-224")
         for param in self.model.parameters():
             param.requires_grad = True
         self.x1_model = MLP(input_dim=768, hidden_dim=512, num_classes=num_classes)
         self.x2_model = MLP(input_dim=768, hidden_dim=512, num_classes=num_classes)
 
-        self.alpha = 0.001
+        self.alpha = 0.01
 
-    def entropy(self, logits):
-        p = torch.nn.functional.softmax(logits, dim=1)
-        log_p = torch.nn.functional.log_softmax(logits, dim=1)
-        entropy = -torch.sum(p * log_p, dim=1)
-        return entropy
-    
     def forward(self, x1_data, x2_data, label, weights, istrain=False):
         """ Forward pass for the FusionNet model. Fuses at logit level.
         
@@ -64,18 +59,15 @@ class FusionNet(nn.Module):
         x1_logits = self.x1_model(output['text_embeds'])
         x2_logits = self.x2_model(output['image_embeds'])
 
-        x1_loss = self.loss_fn(x1_logits, label)
-        x2_loss = self.loss_fn(x2_logits, label)
-
+ 
         if istrain: 
-            x1_entropy = self.entropy(x1_logits)
-            x2_entropy = self.entropy(x2_logits)
-            x1_entropy_loss = x1_entropy @ weights[:, 0]
-            x2_entropy_loss = x2_entropy @ weights[:, 1]
-            x1_loss += self.alpha * x1_entropy_loss
-            x2_loss += self.alpha * x2_entropy_loss
-            return (x1_logits, x2_logits, x1_loss, x2_loss, x1_entropy_loss, x2_entropy_loss)
+            x1_loss = self.loss_fn(x1_logits, label) @ weights[:, 0] * self.alpha
+            x2_loss = self.loss_fn(x2_logits, label) @ weights[:, 1] * self.alpha
+
+            return (x1_logits, x2_logits, x1_loss, x2_loss, x1_loss, x2_loss)
         else: 
+            x1_loss = self.test_loss_fn(x1_logits, label) 
+            x2_loss = self.test_loss_fn(x2_logits, label)
             return (x1_logits, x2_logits, x1_loss, x2_loss)
 
 class MultimodalFoodModel(EnsembleBaseModel): 
@@ -295,5 +287,5 @@ class MultimodalFoodModel(EnsembleBaseModel):
     def _build_model(self):
         return FusionNet(
             num_classes=self.args.num_classes, 
-            loss_fn=nn.CrossEntropyLoss()
+            loss_fn=nn.CrossEntropyLoss(reduction='none'),
         )

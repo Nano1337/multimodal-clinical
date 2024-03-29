@@ -35,7 +35,7 @@ class MultimodalFoodDataset(Dataset):
         self.dev_txt = os.path.join(self.data_path, "my_dev_food.txt")
         self.test_txt = os.path.join(self.data_path, "my_test_food.txt")
 
-        self.weights_path = os.path.join(self.data_path, 'weights_train.npy')
+        self.weights_path = os.path.join(self.data_path, 'weights.npy')
         if os.path.exists(self.weights_path):
             self.weights = np.load(self.weights_path)
         else:
@@ -70,7 +70,7 @@ class MultimodalFoodDataset(Dataset):
                     continue
 
         self.classes = sorted(classes)
-
+        
         self.data2class = data2class
 
         self.av_files = []
