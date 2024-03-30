@@ -6,6 +6,7 @@ import pytorch_lightning as pl
 
 from cremad.backbone import resnet18
 
+from torch.optim.lr_scheduler import StepLR
 from utils.BaseModel import EnsembleBaseModel
 
 class FusionNet(nn.Module):
@@ -50,8 +51,8 @@ class FusionNet(nn.Module):
         x1_logits = self.x1_classifier(a)
         x2_logits = self.x2_classifier(v)
 
-        x1_loss = self.loss_fn(x1_logits, label)
-        x2_loss = self.loss_fn(x2_logits, label)
+        x1_loss = self.loss_fn(x1_logits, label) * 3.0 
+        x2_loss = self.loss_fn(x2_logits, label) * 3.0 
 
         return (x1_logits, x2_logits, x1_loss, x2_loss)
 
@@ -65,6 +66,19 @@ class MultimodalCremadModel(EnsembleBaseModel):
         """
         super(MultimodalCremadModel, self).__init__(args)
 
+    
+    def configure_optimizers(self):
+        optimizer = torch.optim.SGD(self.parameters(), lr=self.args.learning_rate, momentum=0.9, weight_decay=1.0e-4)
+        if self.args.use_scheduler:
+            scheduler = {
+                'scheduler': StepLR(optimizer, step_size=70, gamma=0.1),
+                'interval': 'epoch',
+                'frequency': 1,
+            }
+            return [optimizer], [scheduler]
+            
+        return optimizer
+    
     def _build_model(self):
         return FusionNet(
             num_classes=self.args.num_classes, 

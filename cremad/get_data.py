@@ -127,14 +127,14 @@ class CremadDataset(Dataset):
         images = torch.permute(images, (1,0,2,3))
 
         # Audio
-        if self.mode == 'train':
-            spectrogram = apply_spec_augment(
-                spectrogram, 
-                freq_mask_param=30,  
-                time_mask_param=120, 
-                num_freq_masks=2,  
-                num_time_masks=3    
-            )
+        # if self.mode == 'train':
+        #     spectrogram = apply_spec_augment(
+        #         spectrogram, 
+        #         freq_mask_param=30,  
+        #         time_mask_param=120, 
+        #         num_freq_masks=2,  
+        #         num_time_masks=3    
+        #     )
 
         # label
         label = self.label[idx]

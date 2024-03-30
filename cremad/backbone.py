@@ -57,7 +57,7 @@ class ResNet(nn.Module):
 
     def __init__(self, block, layers, modality, num_classes=1000, pool='avgpool', zero_init_residual=False,
                  groups=1, width_per_group=64, replace_stride_with_dilation=None,
-                 norm_layer=None, compress=True):
+                 norm_layer=None, compress=False):
         super(ResNet, self).__init__()
         self.modality = modality
         self.pool = pool
