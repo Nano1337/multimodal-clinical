@@ -65,8 +65,6 @@ class MultimodalCremadModel(OGMGEBaseModel):
         Args: 
             args (argparse.Namespace): Arguments for the model        
         """
-
-
         super(MultimodalCremadModel, self).__init__(args)
 
     def _build_model(self):
