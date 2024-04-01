@@ -350,7 +350,7 @@ class EnsembleBaseModel(pl.LightningModule, ABC):
         avg_logits = (x1_logits + x2_logits) / 2
         preds = torch.argmax(avg_logits, dim=1)
         joint_acc = torch.mean((torch.argmax(avg_logits, dim=1) == label).float())
-        avg_loss = (x1_loss + x2_loss) / 2
+        avg_loss = (x1_loss + x2_loss) 
 
         # Log loss and accuracy
         self.log("train_step/train_loss", avg_loss, on_step=True, on_epoch=True, prog_bar=False, logger=True)
