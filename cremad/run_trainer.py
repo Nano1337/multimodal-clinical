@@ -72,4 +72,4 @@ def run_training():
     model = get_model(args)
 
     # start training
-    run_trainer(args, model, train_loader, val_loader, test_loader)
+    run_trainer(args, model, train_loader, val_loader, test_loader, train_dataset=train_dataset)

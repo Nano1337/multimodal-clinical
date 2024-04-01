@@ -6,6 +6,7 @@ dropout_p: 0.1
 gpus: [0]
 data_path: "data/cremad/"
 num_cpus: 12 # change to 12 when training
+warmup_epochs: 5
 
 # OGM-GE settings
 grad_mod_type: "OGM_GE" # Options: (None | 'OGM_GE' | 'OGM' | 'noise') 
@@ -14,7 +15,7 @@ alpha: 0.8 # recommended setting 0.8 for Crema-D
 
 # main settings that need to be checked
 use_wandb: True
-model_type: "ensemble" # "ogm_ge" 
-group_name: "cremad_cls6_ensemble_optimalbase" 
+model_type: "biasampler" # "ogm_ge" 
+group_name: "cremad_cls6_ensemble_biasampler_warmup=20_gamma=2" 
 seed: 5
 use_scheduler: True  

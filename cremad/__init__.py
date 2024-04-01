@@ -21,6 +21,8 @@ def get_model(args):
         from cremad.joint_model_qmf_ablate_Lunimodal import MultimodalCremadModel
     elif args.model_type == "ogm_ge_lreg": 
         from cremad.joint_model_ogm_ge_lreg import MultimodalCremadModel
+    elif args.model_type == "biasampler": 
+        from cremad.ensemble_model_biasampler import MultimodalCremadModel
     else:   
         raise NotImplementedError("Model type not implemented")
 
