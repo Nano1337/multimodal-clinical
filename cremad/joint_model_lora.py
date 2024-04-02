@@ -20,28 +20,10 @@ class FusionNet(nn.Module):
             ):
         super(FusionNet, self).__init__()
         self.x1_model = resnet18(modality='audio')
-        for name, param in self.x1_model.named_parameters():
-            if not name_is_lora(name):
-                param.requires_grad = False
         self.x1_classifier = nn.Linear(512, num_classes)
         self.x2_model = resnet18(modality='visual')
-        for name, param in self.x2_model.named_parameters():
-            if not name_is_lora(name):
-                param.requires_grad = False
         self.x2_classifier = nn.Linear(512, num_classes)
 
-        rank = 16
-        self.lora_config = {
-            nn.Linear: {
-                "weight": partial(LoRAParametrization.from_linear, rank=rank, lora_alpha=2*rank)
-            }, 
-            nn.Conv2d: {
-                "weight": partial(LoRAParametrization.from_conv2d, rank=rank, lora_alpha=2*rank)
-            },
-        }
-
-        add_lora(self.x1_model, self.lora_config)
-        add_lora(self.x2_model, self.lora_config)
 
         self.num_classes = num_classes
         self.loss_fn = loss_fn
@@ -90,6 +72,29 @@ class MultimodalCremadModel(JointLogitsBaseModel):
         """
 
         super(MultimodalCremadModel, self).__init__(args)
+        path = "/home/haoli/Documents/multimodal-clinical/data/cremad/_ckpts/cremad_cls6_ensemble_optimal_double/distinctive-snowball-399_best.ckpt"
+        state_dict = torch.load(path)["state_dict"]
+        state_dict = {k.replace("model.", "", 1): v for k, v in state_dict.items()}
+        self.model.load_state_dict(state_dict)
+
+        rank = 4
+        self.lora_config = {
+            nn.Linear: {
+                "weight": partial(LoRAParametrization.from_linear, rank=rank, lora_alpha=2*rank)
+            }, 
+            nn.Conv2d: {
+                "weight": partial(LoRAParametrization.from_conv2d, rank=rank, lora_alpha=2*rank)
+            },
+        }
+        for name, param in self.model.x2_model.named_parameters():
+            if not name_is_lora(name):
+                param.requires_grad = False
+        for name, param in self.model.x1_model.named_parameters():
+            if not name_is_lora(name):
+                param.requires_grad = False
+        add_lora(self.model.x1_model, self.lora_config)
+        add_lora(self.model.x2_model, self.lora_config)
+
 
     def configure_optimizers(self):
         parameters = [

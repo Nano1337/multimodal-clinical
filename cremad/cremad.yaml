@@ -1,6 +1,6 @@
 num_classes: 6 # emotion classification
 batch_size: 64
-learning_rate: 0.006 # paper starts here and decays to 1e-4
+learning_rate: 1.0e-6 # paper starts here and decays to 1e-4
 num_epochs: 100 
 dropout_p: 0.1
 gpus: [0]
@@ -15,6 +15,9 @@ alpha: 0.8 # recommended setting 0.8 for Crema-D
 # main settings that need to be checked
 use_wandb: True
 model_type: "jlogits_lora" # "ogm_ge" 
-group_name: "cremad_cls6_jlogits_lora_rank=16" 
+group_name: "cremad_cls6_jlogits_audiolora_rank=4_ensemblecontinue_adamw_lr=1e-6" 
 seed: 5
 use_scheduler: True
+
+
+# next experiment, only use lora with x1 backbone (audio lora only)
