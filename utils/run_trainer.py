@@ -55,14 +55,17 @@ def run_trainer(args, model, train_loader, val_loader, test_loader, overfit_batc
         )
     else: 
         raise NotImplementedError("It is not advised to train without a GPU")
-
+    
+    # path = "/home/haoli/Documents/multimodal-clinical/data/cremad/_ckpts/cremad_cls6_ensemble_optimal_double/distinctive-snowball-399_best.ckpt"
+    path = "/home/haoli/Documents/multimodal-clinical/data/cremad/_ckpts/cremad_cls6_ensemble_mixup/light-wave-435_best.ckpt"
+    
     trainer.fit(
         model, 
         train_dataloaders=train_loader, 
         val_dataloaders=val_loader, 
+        ckpt_path=path,
     )
-
-    model.load_state_dict(torch.load(checkpoint_logger.best_model_path)["state_dict"])
+    model.load_state_dict(torch.load(checkpoint_logger.best_model_path)["state_dict"]) # checkpoint_logger.best_model_path
 
     trainer.test(
         model, 

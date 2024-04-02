@@ -23,6 +23,12 @@ def get_model(args):
         from cremad.joint_model_ogm_ge_lreg import MultimodalCremadModel
     elif args.model_type == "jlogits_lora": 
         from cremad.joint_model_lora import MultimodalCremadModel
+    elif args.model_type == "ensemble_lora": 
+        from cremad.ensemble_model_lora import MultimodalCremadModel
+    elif args.model_type == "jlogits_poe":
+        from cremad.joint_model_poe import MultimodalCremadModel
+    elif args.model_type == "ensemble_mixup": 
+        from cremad.ensemble_model_mixup import MultimodalCremadModel
     else:   
         raise NotImplementedError("Model type not implemented")
 

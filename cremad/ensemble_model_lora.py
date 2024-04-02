@@ -1,15 +1,14 @@
 import torch 
 import torch.nn as nn
 import torch.nn.functional as F
+from functools import partial
 
 import pytorch_lightning as pl
-from torchvision import models as tmodels
 
 from cremad.backbone import resnet18
-from functools import partial
-from torch.optim.lr_scheduler import StepLR
 
-from utils.BaseModel import JointLogitsBaseModel
+from torch.optim.lr_scheduler import StepLR
+from utils.BaseModel import EnsembleBaseModel
 from minlora import add_lora, apply_to_lora, disable_lora, enable_lora, get_lora_params, merge_lora, name_is_lora, remove_lora, load_multiple_lora, select_lora, LoRAParametrization
 
 class FusionNet(nn.Module):
@@ -23,7 +22,6 @@ class FusionNet(nn.Module):
         self.x1_classifier = nn.Linear(512, num_classes)
         self.x2_model = resnet18(modality='visual')
         self.x2_classifier = nn.Linear(512, num_classes)
-
 
         self.num_classes = num_classes
         self.loss_fn = loss_fn
@@ -55,14 +53,12 @@ class FusionNet(nn.Module):
         x1_logits = self.x1_classifier(a)
         x2_logits = self.x2_classifier(v)
 
-        # fuse at logit level
-        avg_logits = (x1_logits + x2_logits) / 2
+        x1_loss = self.loss_fn(x1_logits, label) * 3.0 
+        x2_loss = self.loss_fn(x2_logits, label) * 3.0 
 
-        loss = self.loss_fn(avg_logits, label)
+        return (x1_logits, x2_logits, x1_loss, x2_loss)
 
-        return (x1_logits, x2_logits, avg_logits, loss)
-
-class MultimodalCremadModel(JointLogitsBaseModel): 
+class MultimodalCremadModel(EnsembleBaseModel): 
 
     def __init__(self, args): 
         """Initialize MultimodalCremadModel.
@@ -70,13 +66,11 @@ class MultimodalCremadModel(JointLogitsBaseModel):
         Args: 
             args (argparse.Namespace): Arguments for the model        
         """
-
         super(MultimodalCremadModel, self).__init__(args)
         path = "/home/haoli/Documents/multimodal-clinical/data/cremad/_ckpts/cremad_cls6_ensemble_optimal_double/distinctive-snowball-399_best.ckpt"
         state_dict = torch.load(path)["state_dict"]
         state_dict = {k.replace("model.", "", 1): v for k, v in state_dict.items()}
         self.model.load_state_dict(state_dict)
-
         rank = 4
         self.lora_config = {
             nn.Linear: {
@@ -86,29 +80,23 @@ class MultimodalCremadModel(JointLogitsBaseModel):
                 "weight": partial(LoRAParametrization.from_conv2d, rank=rank, lora_alpha=2*rank)
             },
         }
-        for name, param in self.model.x2_model.named_parameters():
-            if not name_is_lora(name):
-                param.requires_grad = False
         for name, param in self.model.x1_model.named_parameters():
             if not name_is_lora(name):
                 param.requires_grad = False
-        for name, param in self.model.x1_classifier.named_parameters():
+        for name, param in self.model.x2_model.named_parameters():
             if not name_is_lora(name):
                 param.requires_grad = False
-        for name, param in self.model.x2_classifier.named_parameters():
-            if not name_is_lora(name):
-                param.requires_grad = False
+
         add_lora(self.model.x1_model, self.lora_config)
         add_lora(self.model.x2_model, self.lora_config)
-
 
     def configure_optimizers(self):
         parameters = [
             {"params": list(get_lora_params(self.model))},
-            # {"params": self.model.x1_classifier.parameters()},
-            # {"params": self.model.x2_classifier.parameters()}
+            {"params": self.model.x1_classifier.parameters()},
+            {"params": self.model.x2_classifier.parameters()}
         ]
-        optimizer = torch.optim.SGD(parameters, lr=self.args.learning_rate, momentum=0.9, weight_decay=1.0e-4)
+        optimizer = torch.optim.SGD(self.parameters(), lr=self.args.learning_rate, momentum=0.9, weight_decay=1.0e-4)
         if self.args.use_scheduler:
             scheduler = {
                 'scheduler': StepLR(optimizer, step_size=70, gamma=0.1),
@@ -118,7 +106,7 @@ class MultimodalCremadModel(JointLogitsBaseModel):
             return [optimizer], [scheduler]
             
         return optimizer
-
+    
     def _build_model(self):
         return FusionNet(
             num_classes=self.args.num_classes, 
