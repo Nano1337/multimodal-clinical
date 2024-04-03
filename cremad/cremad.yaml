@@ -14,10 +14,8 @@ alpha: 0.8 # recommended setting 0.8 for Crema-D
 
 # main settings that need to be checked
 use_wandb: True
-model_type: "qmf" # "ogm_ge" 
-group_name: "cremad_cls6_ensemble_mixup_qmf_train" 
+model_type: "ensemble_mixup_qmf" # "ogm_ge" 
+group_name: "cremad_cls6_ensemble_mixup_qmf_ensemblecontinue" 
 seed: 5
 use_scheduler: True
 
-
-# next experiment, only use lora with x1 backbone (audio lora only)

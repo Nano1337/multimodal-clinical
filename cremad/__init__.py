@@ -29,6 +29,8 @@ def get_model(args):
         from cremad.joint_model_poe import MultimodalCremadModel
     elif args.model_type == "ensemble_mixup": 
         from cremad.ensemble_model_mixup import MultimodalCremadModel
+    elif args.model_type == "ensemble_mixup_qmf": 
+        from cremad.ensemble_model_mixup_qmf import MultimodalCremadModel
     else:   
         raise NotImplementedError("Model type not implemented")
 

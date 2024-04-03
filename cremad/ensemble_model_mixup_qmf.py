@@ -8,6 +8,7 @@ from cremad.backbone import resnet18
 
 from torch.optim.lr_scheduler import StepLR
 from utils.BaseModel import EnsembleBaseModel
+from existing_algos.QMF import QMF
 
 class FusionNet(nn.Module):
     def __init__(
@@ -20,6 +21,8 @@ class FusionNet(nn.Module):
         self.x1_classifier = nn.Linear(512, num_classes)
         self.x2_model = resnet18(modality='visual')
         self.x2_classifier = nn.Linear(512, num_classes)
+        self.num_modality = 2
+        self.qmf = QMF(self.num_modality, self.args.num_samples) # TODO: figure out where I created args.num_samples
 
         self.num_classes = num_classes
         self.loss_fn = loss_fn
