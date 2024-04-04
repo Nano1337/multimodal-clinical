@@ -61,12 +61,12 @@ def run_trainer(args, model, train_loader, val_loader, test_loader, overfit_batc
         train_dataloaders=train_loader, 
         val_dataloaders=val_loader, 
     )
-
-    model.load_state_dict(torch.load(checkpoint_logger.best_model_path)["state_dict"])
+    # path = "/home/haoli/Documents/multimodal-clinical/data/enrico/_ckpts/enrico_cls20_ensemble_baseline_lr=0.006/golden-breeze-443_best.ckpt"
+    model.load_state_dict(torch.load(checkpoint_logger.best_model_path)["state_dict"]) 
 
     trainer.test(
         model, 
-        dataloaders=test_loader
+        dataloaders=test_loader,
     )
 
 
