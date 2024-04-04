@@ -169,7 +169,7 @@ class EnricoDataset(Dataset):
         return [screenImg, screenWireframeImg, screenLabel]
 
 
-def get_data(data_dir):
+def get_data(args):
     """Get dataloaders for this dataset.
 
     Args:
@@ -178,6 +178,7 @@ def get_data(data_dir):
     Returns:
         tuple: Tuple of ((train dataset, validation dataset, test dataset, sampler))
     """
+    data_dir = args.data_path
     ds_train = EnricoDataset(data_dir, mode="train")
     ds_val = EnricoDataset(data_dir, mode="val")
     ds_test = EnricoDataset(data_dir, mode="test")

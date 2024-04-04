@@ -10,7 +10,7 @@ A Work in Progress...
 - [ ] Audio-Video Event Localization (AVE), transformed into classification task per PMR paper
 - [ ] Audio-Video MNIST (AV-MNIST) for Digit Classification
 - [X] Crema-D (Audio, Video) for Emotion Recognition
-- [ ] Enrico (Screenshot, Wireframe) for Design Classification
+- [X] Enrico (Screenshot, Wireframe) for Design Classification
 - [ ] FakeNews (Text, Image) for Fake News Detection
 - [X] Food101 (Image, Text) for Food Classification
 - [ ] MIMIC (Metadata, Timeseries) for EHR Mortality Prediction
@@ -46,6 +46,9 @@ python main.py --dir cremad
 ```
 
 ## Changelog
+
+April 4th: 
+- [X] Update Enrico with standard format
 
 March 25th: 
 - [X] Update Food101 and Crema-D to use factory patterns for model selection

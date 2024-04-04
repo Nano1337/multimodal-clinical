@@ -1,14 +1,19 @@
 num_classes: 20
-batch_size: 32
-learning_rate: 1.0e-4
-num_epochs: 30
+batch_size: 64
+learning_rate: 0.001
+num_epochs: 100
 dropout_p: 0.1
 gpus: [0]
-data_path: "../data/enrico/"
-num_cpus: 8
+data_path: "data/enrico/"
+num_cpus: 12
+
+# OGM-GE settings
+grad_mod_type: "OGM_GE" # Options: (None | 'OGM_GE' | 'OGM' | 'noise') 
+alpha: 0.1 # recommended setting 0.1 default
 
 # main settings that need to be checked
 use_wandb: True
-model_type: "jlogits" # ensemble
-group_name: "enrico_cls20_jlogits_noise_p=0.9"
-# seed: 3 # comment out if using run_parallel.sh
+model_type: "ensemble" # "ogm_ge" 
+group_name: "enrico_cls20_ensemble_baseline"
+seed: 5
+use_scheduler: True  

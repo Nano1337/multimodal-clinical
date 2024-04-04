@@ -9,6 +9,8 @@ if arg.dir == "cremad":
     from cremad.run_trainer import run_training
 elif arg.dir == "food101":
     from food101.run_training import run_training
+elif arg.dir == "enrico":
+    from enrico.run_training import run_training
 else: 
     raise NotImplementedError("Please specify a directory to run")
 
