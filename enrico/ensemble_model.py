@@ -70,8 +70,8 @@ class FusionNet(nn.Module):
         x1_logits = self.x1_model(x1_data)
         x2_logits = self.x2_model(x2_data)
 
-        x1_loss = self.loss_fn(x1_logits, label)
-        x2_loss = self.loss_fn(x2_logits, label)
+        x1_loss = self.loss_fn(x1_logits, label) 
+        x2_loss = self.loss_fn(x2_logits, label) 
 
         return (x1_logits, x2_logits, x1_loss, x2_loss)
 
@@ -90,7 +90,7 @@ class MultimodalEnricoModel(EnsembleBaseModel):
         optimizer = torch.optim.SGD(self.parameters(), lr=self.args.learning_rate, momentum=0.9, weight_decay=1.0e-4)
         if self.args.use_scheduler:
             scheduler = {
-                'scheduler': StepLR(optimizer, step_size=70, gamma=0.1),
+                'scheduler': StepLR(optimizer, step_size=70, gamma=0.5),
                 'interval': 'epoch',
                 'frequency': 1,
             }
