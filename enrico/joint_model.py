@@ -9,48 +9,47 @@ from utils.BaseModel import JointLogitsBaseModel
 
 from torch.optim.lr_scheduler import StepLR
 
-class VGG11Slim(nn.Module): 
-    """Extends VGG11 with a fewer layers in the classifier.
+class ResNet18Slim(nn.Module):
+    """Extends ResNet18 with a separate embedding and classifier layers.
     
-    Slimmer version of vgg11 model with fewer layers in classifier.
+    Slimmer version of ResNet18 model with separate embedding and classifier layers.
     """
     
-    def __init__(self, hiddim, dropout=True, dropoutp=0.2, pretrained=True, freeze_features=True):
-        """Initialize VGG11Slim Object.
+    def __init__(self, hiddim, pretrained=True, freeze_features=True):
+        """Initialize ResNet18Slim Object.
 
         Args:
             hiddim (int): Hidden dimension size
-            dropout (bool, optional): Whether to apply dropout to output of ReLU. Defaults to True.
-            dropoutp (float, optional): Dropout probability. Defaults to 0.2.
-            pretrained (bool, optional): Whether to instantiate VGG11 from Pretrained. Defaults to True.
-            freeze_features (bool, optional): Whether to keep VGG11 features frozen. Defaults to True.
+            pretrained (bool, optional): Whether to instantiate ResNet18 from Pretrained. Defaults to True.
+            freeze_features (bool, optional): Whether to keep ResNet18 features frozen. Defaults to True.
         """
-        super(VGG11Slim, self).__init__()
+        super(ResNet18Slim, self).__init__()
         self.hiddim = hiddim
-        self.model = tmodels.vgg11_bn(pretrained=pretrained)
-        self.model.classifier = nn.Linear(512 * 7 * 7, hiddim)
-        if dropout:
-            feats_list = list(self.model.features)
-            new_feats_list = []
-            for feat in feats_list:
-                new_feats_list.append(feat)
-                if isinstance(feat, nn.ReLU):
-                    new_feats_list.append(nn.Dropout(p=dropoutp))
-
-            self.model.features = nn.Sequential(*new_feats_list)
-        for p in self.model.features.parameters():
-            p.requires_grad = (not freeze_features)
+        self.model = tmodels.resnet18(pretrained=pretrained)
+        
+        # Remove the last fully connected layer
+        self.model = nn.Sequential(*list(self.model.children())[:-1])
+        
+        self.embedding = nn.AdaptiveAvgPool2d((1, 1))
+        self.classifier = nn.Linear(512, hiddim)
+        
+        if freeze_features:
+            for param in self.model.parameters():
+                param.requires_grad = False
 
     def forward(self, x):
-        """Apply VGG11Slim to Layer Input.
+        """Apply ResNet18Slim to Layer Input.
 
         Args:
             x (torch.Tensor): Layer Input
 
         Returns:
-            torch.Tensor: Layer Output
+            tuple: (embedding, logits)
         """
-        return self.model(x)
+        features = self.model(x)
+        embedding = self.embedding(features).view(features.size(0), -1)
+        logits = self.classifier(embedding)
+        return embedding, logits
 
 class FusionNet(nn.Module):
     def __init__(
@@ -59,8 +58,8 @@ class FusionNet(nn.Module):
             loss_fn
             ):
         super(FusionNet, self).__init__()
-        self.x1_model = VGG11Slim(num_classes)
-        self.x2_model = VGG11Slim(num_classes)
+        self.x1_model = ResNet18Slim(num_classes)
+        self.x2_model = ResNet18Slim(num_classes)
 
         self.num_classes = num_classes
         self.loss_fn = loss_fn
@@ -76,8 +75,8 @@ class FusionNet(nn.Module):
         Returns:
             Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]: Tuple containing the logits for modality 1, modality 2, average logits, and loss
         """
-        x1_logits = self.x1_model(x1_data)
-        x2_logits = self.x2_model(x2_data)
+        x1_embedding, x1_logits = self.x1_model(x1_data)
+        x2_embedding, x2_logits = self.x2_model(x2_data)
 
         # fuse at logit level
         avg_logits = (x1_logits + x2_logits) / 2

@@ -10,6 +10,41 @@ from utils.BaseModel import EnsembleBaseModel
 
 from torch.optim.lr_scheduler import StepLR
 
+def get_vicreg_loss(z_a, z_b): 
+    """Calculate VicReg Loss.
+
+    Args:
+        x1_embedding (torch.Tensor): Embedding from first model
+        x2_embedding (torch.Tensor): Embedding from second model
+
+    Returns:
+        torch.Tensor: VicReg Loss
+    """
+    eps = 1e-8
+
+    # variance loss
+    std_z_a = torch.sqrt(z_a.var(dim=0) + eps)
+    std_z_b = torch.sqrt(z_b.var(dim=0) + eps)
+    loss_v_a = torch.mean(F.relu(1 - std_z_a))
+    loss_v_b = torch.mean(F.relu(1 - std_z_b))
+    loss_var = loss_v_a + loss_v_b
+
+    # invariance loss
+    loss_inv = F.mse_loss(z_a, z_b)
+
+    # covariance loss
+    N, D = z_a.shape
+    z_a = z_a - z_a.mean(dim=0)
+    z_b = z_b - z_b.mean(dim=0)
+    cov_z_a = ((z_a.T @ z_a) / (N - 1)).square()  # DxD
+    cov_z_b = ((z_b.T @ z_b) / (N - 1)).square()  # DxD
+    loss_c_a = (cov_z_a.sum() - cov_z_a.diagonal().sum()) / D
+    loss_c_b = (cov_z_b.sum() - cov_z_b.diagonal().sum()) / D   
+    loss_cov = loss_c_a + loss_c_b
+
+    return loss_var + loss_inv + loss_cov
+
+
 class ResNet18Slim(nn.Module):
     """Extends ResNet18 with a separate embedding and classifier layers.
     
@@ -71,8 +106,9 @@ class FusionNet(nn.Module):
 
         x1_loss = self.loss_fn(x1_logits, label) 
         x2_loss = self.loss_fn(x2_logits, label) 
+        vicreg_loss = get_vicreg_loss(x1_embedding, x2_embedding)
 
-        return (x1_logits, x2_logits, x1_loss, x2_loss)
+        return (x1_logits, x2_logits, x1_loss, x2_loss, vicreg_loss)
 
 class MultimodalEnricoModel(EnsembleBaseModel): 
 
@@ -84,33 +120,6 @@ class MultimodalEnricoModel(EnsembleBaseModel):
         """
 
         super(MultimodalEnricoModel, self).__init__(args)
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        self.count_dict = {
-            "train": torch.tensor([0, 0, 0], device=device),
-            "val": torch.tensor([0, 0, 0], device=device),
-            "test": torch.tensor([0, 0, 0], device=device)
-        }
-        self.loss_fn = nn.CrossEntropyLoss(reduction="none")
-    
-    def update_counts(self, joint_loss, x1_loss, x2_loss, mode="train"): 
-        joint_loss_min = torch.minimum(joint_loss, x1_loss).to(self.device)
-        joint_loss_min = torch.minimum(joint_loss_min, x2_loss).to(self.device)
-        joint_loss = joint_loss.to(self.device)
-        x1_loss = x1_loss.to(self.device)
-        x2_loss = x2_loss.to(self.device)
-        self.count_dict[mode] += torch.sum(torch.stack([
-                joint_loss == joint_loss_min,
-                x1_loss == joint_loss_min, 
-                x2_loss == joint_loss_min
-            ], dim=1), dim=0).int()
-        
-    def log_counts(self, mode="train"): 
-        self.log(f"{mode}_epoch/joint_count", self.count_dict[mode][0], on_step=False, on_epoch=True, prog_bar=False, logger=True)
-        self.log(f"{mode}_epoch/x1_count", self.count_dict[mode][1], on_step=False, on_epoch=True, prog_bar=False, logger=True)
-        self.log(f"{mode}_epoch/x2_count", self.count_dict[mode][2], on_step=False, on_epoch=True, prog_bar=False, logger=True)
-        self.count_dict[mode][0] = 0
-        self.count_dict[mode][1] = 0
-        self.count_dict[mode][2] = 0
 
     def forward(self, x1, x2, label): 
         return self.model(x1, x2, label)
@@ -131,24 +140,20 @@ class MultimodalEnricoModel(EnsembleBaseModel):
         x1, x2, label = batch
 
         # Get predictions and loss from model
-        x1_logits, x2_logits, x1_loss, x2_loss = self.model(x1, x2, label)
+        x1_logits, x2_logits, x1_loss, x2_loss, vicreg_loss = self.model(x1, x2, label)
 
         # Calculate acc, unimodal acc not uncalibrated
         x1_acc_cal = torch.mean((torch.argmax(x1_logits, dim=1) == label).float())
         x2_acc_cal = torch.mean((torch.argmax(x2_logits, dim=1) == label).float())
         avg_logits = (x1_logits + x2_logits) / 2
-        joint_loss = self.loss_fn(avg_logits, label)
-        self.update_counts(joint_loss, x1_loss, x2_loss, mode="train")
         preds = torch.argmax(avg_logits, dim=1)
         joint_acc = torch.mean((torch.argmax(avg_logits, dim=1) == label).float())
-        x1_loss = torch.mean(x1_loss)
-        x2_loss = torch.mean(x2_loss)
-        avg_loss = (x1_loss + x2_loss) 
-
+        avg_loss = (x1_loss + x2_loss) + vicreg_loss * 0.1
 
         # Log loss and accuracy
         self.log("train_step/train_loss", avg_loss, on_step=True, on_epoch=True, prog_bar=False, logger=True)
         self.log("train_step/train_acc", joint_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
+        self.log("train_step/train_vicreg_loss", vicreg_loss, on_step=True, on_epoch=True, prog_bar=False, logger=True)
         self.log("train_step/train_x1_acc", x1_acc_cal, on_step=True, on_epoch=True, prog_bar=False, logger=True)
         self.log("train_step/train_x2_acc", x2_acc_cal, on_step=True, on_epoch=True, prog_bar=False, logger=True)
 
@@ -165,8 +170,6 @@ class MultimodalEnricoModel(EnsembleBaseModel):
         """ Called at the end of the training epoch. Logs average loss and accuracy.
 
         """
-        self.log_counts("train")
-
         avg_loss = torch.stack(self.train_metrics["train_loss"]).mean()
         avg_acc = torch.stack(self.train_metrics["train_acc"]).mean()
         x1_acc = torch.mean(torch.stack(self.train_metrics["train_x1_acc"]))
@@ -198,22 +201,19 @@ class MultimodalEnricoModel(EnsembleBaseModel):
         x1, x2, label = batch
 
         # Get predictions and loss from model
-        x1_logits, x2_logits, x1_loss, x2_loss = self.model(x1, x2, label)
+        x1_logits, x2_logits, x1_loss, x2_loss, vicreg_loss = self.model(x1, x2, label)
 
         # Calculate accuracy
         x1_acc = torch.mean((torch.argmax(x1_logits, dim=1) == label).float())
         x2_acc = torch.mean((torch.argmax(x2_logits, dim=1) == label).float())
         avg_logits = (x1_logits + x2_logits) / 2
-        joint_loss = self.loss_fn(avg_logits, label)
         joint_acc = torch.mean((torch.argmax(avg_logits, dim=1) == label).float())
+        avg_loss = x1_loss + x2_loss + vicreg_loss * 0.1
 
-        self.update_counts(joint_loss, x1_loss, x2_loss, mode="val")
-        x1_loss = torch.mean(x1_loss)
-        x2_loss = torch.mean(x2_loss)
-        avg_loss = (x1_loss + x2_loss) / 2
         # Log loss and accuracy
         self.log("val_step/val_acc", joint_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
         self.log("val_step/val_loss", avg_loss, on_step=True, on_epoch=True, prog_bar=False, logger=True)
+        self.log("val_step/val_vicreg_loss", vicreg_loss, on_step=True, on_epoch=True, prog_bar=False, logger=True)
 
         self.val_metrics["val_loss"].append(avg_loss)
         self.val_metrics["val_acc"].append(joint_acc)
@@ -229,8 +229,6 @@ class MultimodalEnricoModel(EnsembleBaseModel):
         Applies unimodal offset correction to logits and calculates accuracy for each modality and jointly
 
         """
-        self.log_counts("val")
-
         avg_loss = torch.stack(self.val_metrics["val_loss"]).mean()
         avg_acc = torch.stack(self.val_metrics["val_acc"]).mean()
         x1_acc = torch.mean(torch.stack(self.val_metrics["val_x1_acc"]))
@@ -245,6 +243,7 @@ class MultimodalEnricoModel(EnsembleBaseModel):
         self.val_metrics["val_acc"].clear()
         self.val_metrics["val_x1_acc"].clear()
         self.val_metrics["val_x2_acc"].clear()
+
     def test_step(self, batch, batch_idx):
         """Test step for the model. Logs loss and accuracy.
 
@@ -261,27 +260,18 @@ class MultimodalEnricoModel(EnsembleBaseModel):
         x1, x2, label = batch
 
         # Get predictions and loss from model
-        x1_logits, x2_logits, x1_loss, x2_loss = self.model(x1, x2, label)
-
-     
-        avg_logits = (x1_logits + x2_logits) / 2
-        joint_loss = self.loss_fn(avg_logits, label)
-
-        # update counts
-        self.update_counts(joint_loss, x1_loss, x2_loss)
-
-        x1_loss = torch.mean(x1_loss)
-        x2_loss = torch.mean(x2_loss)
+        x1_logits, x2_logits, x1_loss, x2_loss, vicreg_loss = self.model(x1, x2, label)
 
         # Calculate accuracy
         x1_acc = torch.mean((torch.argmax(x1_logits, dim=1) == label).float())
         x2_acc = torch.mean((torch.argmax(x2_logits, dim=1) == label).float())
-
+        avg_logits = (x1_logits + x2_logits) / 2
         joint_acc = torch.mean((torch.argmax(avg_logits, dim=1) == label).float())
-        avg_loss = (x1_loss + x2_loss) / 2
+        avg_loss = (x1_loss + x2_loss) + vicreg_loss * 0.1
 
         # Log loss and accuracy
         self.log("test_step/test_loss", avg_loss, on_step=True, on_epoch=True, prog_bar=False, logger=True)
+        self.log("test_step/test_vicreg_loss", vicreg_loss, on_step=True, on_epoch=True, prog_bar=False, logger=True)
         self.log("test_step/test_acc", joint_acc, on_step=True, on_epoch=True, prog_bar=False, logger=True)
 
         self.test_metrics["test_loss"].append(avg_loss)
@@ -298,7 +288,6 @@ class MultimodalEnricoModel(EnsembleBaseModel):
         Applies unimodal offset correction to logits and calculates accuracy for each modality and jointly
 
         """
-        self.log_counts("test")
         avg_loss = torch.stack(self.test_metrics["test_loss"]).mean()
         avg_acc = torch.stack(self.test_metrics["test_acc"]).mean()
         x1_acc = torch.mean(torch.stack(self.test_metrics["test_x1_acc"]))
@@ -329,5 +318,5 @@ class MultimodalEnricoModel(EnsembleBaseModel):
     def _build_model(self):
         return FusionNet(
             num_classes=self.args.num_classes, 
-            loss_fn=nn.CrossEntropyLoss(reduction="none")
+            loss_fn=nn.CrossEntropyLoss()
         )
