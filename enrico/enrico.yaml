@@ -1,6 +1,6 @@
 num_classes: 20
 batch_size: 64
-learning_rate: 0.000001
+learning_rate: 0.006
 num_epochs: 100
 dropout_p: 0.1
 gpus: [0]
@@ -14,6 +14,6 @@ alpha: 0.1 # recommended setting 0.1 default
 # main settings that need to be checked
 use_wandb: True
 model_type: "jlogits" # "ogm_ge" 
-group_name: "enrico_cls20_jlogits_baseline_ensemblecontinue"
+group_name: "enrico_cls20_joint_logit"
 seed: 5
 use_scheduler: True  

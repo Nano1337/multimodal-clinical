@@ -61,12 +61,12 @@ def run_trainer(args, model, train_loader, val_loader, test_loader, overfit_batc
         train_dataloaders=train_loader, 
         val_dataloaders=val_loader, 
     )
-
-    model.load_state_dict(torch.load(checkpoint_logger.best_model_path)["state_dict"])
+    
+    model.load_state_dict(torch.load(checkpoint_logger.best_model_path)["state_dict"]) 
 
     trainer.test(
         model, 
-        dataloaders=test_loader
+        dataloaders=test_loader,
     )
 
 
