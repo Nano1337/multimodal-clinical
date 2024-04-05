@@ -9,6 +9,8 @@ def get_model(args):
         from enrico.joint_model_counts import MultimodalEnricoModel
     elif args.model_type == "ensemble_vicreg": 
         from enrico.ensemble_model_vicreg import MultimodalEnricoModel
+    elif args.model_type == "memc": 
+        from enrico.memc_model import MultimodalEnricoModel
     else: 
         raise NotImplementedError("Model type not implemented")
     

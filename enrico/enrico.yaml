@@ -13,7 +13,7 @@ alpha: 0.1 # recommended setting 0.1 default
 
 # main settings that need to be checked
 use_wandb: True
-model_type: "jlogits" # "ogm_ge" 
-group_name: "enrico_cls20_joint_logit"
+model_type: "memc" # "ogm_ge" 
+group_name: "enrico_cls20_memc_baseline_patchsize=2_kmeans_k=4_uniloss"
 seed: 5
-use_scheduler: True  
+use_scheduler: False
