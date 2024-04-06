@@ -1,6 +1,6 @@
 num_classes: 20
 batch_size: 64
-learning_rate: 0.006
+learning_rate: 0.02
 num_epochs: 100
 dropout_p: 0.1
 gpus: [0]
@@ -13,7 +13,7 @@ alpha: 0.1 # recommended setting 0.1 default
 
 # main settings that need to be checked
 use_wandb: True
-model_type: "memc" # "ogm_ge" 
-group_name: "enrico_cls20_memc_baseline_patchsize=2_kmeans_k=4"
+model_type: "diffcluster" # "ogm_ge" 
+group_name: "enrico_cls20_diffcluster_baseline_patchsize=2_kmeans_k=2_softkmeans_noattn_adamw"
 seed: 5
 use_scheduler: False

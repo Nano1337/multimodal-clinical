@@ -2,17 +2,11 @@ from gc import freeze
 import torch 
 import torch.nn as nn
 import torch.nn.functional as F
-
 import pytorch_lightning as pl
 from torchvision import models as tmodels
-
 from utils.BaseModel import JointLogitsBaseModel
-
 from torch.optim.lr_scheduler import StepLR
-
-from torch.nn import TransformerEncoderLayer
-from cuml.cluster import KMeans
-from sklearn.metrics import pairwise_distances_argmin_min
+from torch_kmeans import SoftKMeans
 
 class ResNet18Slim(nn.Module):
     """Extends ResNet18 with a separate patch embedding layer.
@@ -66,30 +60,30 @@ class ResNet18Slim(nn.Module):
 class FusionNet(nn.Module):
     def __init__(
             self, 
+            args,
             num_classes, 
             loss_fn,
             hiddim=512,
-            num_layers=3,
-            nhead=8,
             ):
         super(FusionNet, self).__init__()
+        self.args = args
         self.x1_model = ResNet18Slim(hiddim, freeze_features=False)
         self.x2_model = ResNet18Slim(hiddim, freeze_features=False)
         self.num_classes = num_classes
         self.loss_fn = loss_fn
         
-        # Create transformer encoder layers
-        encoder_layer = TransformerEncoderLayer(d_model=hiddim, nhead=nhead)
-        self.transformer_encoder = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
-
-        # final_sa_layer = nn.TransformerEncoderLayer(d_model=hiddim, nhead=nhead)
-        # self.final_sa = nn.TransformerEncoder(final_sa_layer, num_layers=num_layers)
-
+        self.k = 2 # number of centroids
+        self.kmeans = SoftKMeans(
+            n_clusters=self.k, 
+            n_init=1, 
+            max_iter=30, 
+            random_state=self.args.seed, 
+            verbose=False, 
+            )
         
-        self.num_random = 3
-
         # Adjust the final classifier to accept the flattened centroids
-        self.classifier = nn.Linear(hiddim * self.num_random, num_classes) # 1 should be self.num_random if concatenating centroids
+        self.classifier = nn.Linear(hiddim * self.k, hiddim)
+        # self.final_classifier = nn.Linear(hiddim, num_classes)
 
     def forward(self, x1_data, x2_data, label):
         """ Forward pass for the FusionNet model. Fuses at token level using a transformer encoder.
@@ -102,42 +96,20 @@ class FusionNet(nn.Module):
         Returns:
             Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]: Tuple containing the logits for modality 1, modality 2, fused logits, and loss
         """
+
+        # get unimodal feature tokens
         x1_tokens = self.x1_model(x1_data)
         x2_tokens = self.x2_model(x2_data)
 
         # Concatenate tokens from both modalities
         fused_tokens = torch.cat((x1_tokens, x2_tokens), dim=1)
-        
-        # Apply transformer encoder
-        fused_tokens = self.transformer_encoder(fused_tokens)
 
-        # Initialize centroids indices list
-        centroids_indices = []
-        
-        # Run KMeans individually for each sample to find centroid indices
-        for sample_idx, sample in enumerate(fused_tokens):
-            sample = sample.cpu().detach().numpy()
-            kmeans = KMeans(n_clusters=self.num_random, n_init=1, max_iter=30, random_state=42)
-            kmeans.fit(sample)
-            
-            # Find the indices of the closest points to the centroids
-            closest, _ = pairwise_distances_argmin_min(kmeans.cluster_centers_, sample)
+        # calculate sample-wise centroids
+        centroids = self.kmeans(fused_tokens).centers
 
-            # Append indices of centroids for the current sample
-            centroids_indices.append(closest)
-
-        # Use indices to gather original tensor centroids
-        centroids = torch.stack([fused_tokens[sample_idx, idx] for sample_idx, idx in enumerate(centroids_indices)])
-    
         # Flatten centroids to pass through the linear classifier
         centroids_flattened = centroids.flatten(start_dim=1)
-        # centroids_flattened = centroids.mean(dim=1)
 
-        # # Apply final self-attention layer
-        # centroids = self.final_sa(centroids)
-        # centroids = centroids.mean(dim=1)
-        # Final classification
-        
         fused_logits = self.classifier(centroids_flattened)
         
         loss = self.loss_fn(fused_logits, label)
@@ -157,13 +129,7 @@ class MultimodalEnricoModel(JointLogitsBaseModel):
 
         self.args = args
         self.model = self._build_model()
-        
-        # ckpt_path = "/home/haoli/Documents/multimodal-clinical/data/enrico/_ckpts/enrico_cls20_ensemble_lr=0.006/ferengi-directive-458_best.ckpt"
-        # state_dict = torch.load(ckpt_path)["state_dict"]
-        # for key in list(state_dict.keys()):
-        #     if "model." in key:
-        #         state_dict[key.replace("model.", "", 1)] = state_dict.pop(key)
-        # self.model.load_state_dict(state_dict, strict=False)
+
         self.num_modality = 2
 
         self.train_metrics = {
@@ -340,7 +306,7 @@ class MultimodalEnricoModel(JointLogitsBaseModel):
         optimizer = torch.optim.SGD(self.parameters(), lr=self.args.learning_rate, momentum=0.9, weight_decay=1.0e-4)
         if self.args.use_scheduler:
             scheduler = {
-                'scheduler': StepLR(optimizer, step_size=10, gamma=0.5),
+                'scheduler': StepLR(optimizer, step_size=50, gamma=0.5),
                 'interval': 'epoch',
                 'frequency': 1,
             }
@@ -350,6 +316,7 @@ class MultimodalEnricoModel(JointLogitsBaseModel):
     
     def _build_model(self):
         return FusionNet(
+            args=self.args,
             num_classes=self.args.num_classes, 
             loss_fn=nn.CrossEntropyLoss()
         )

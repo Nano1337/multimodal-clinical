@@ -11,6 +11,8 @@ def get_model(args):
         from enrico.ensemble_model_vicreg import MultimodalEnricoModel
     elif args.model_type == "memc": 
         from enrico.memc_model import MultimodalEnricoModel
+    elif args.model_type == "diffcluster": 
+        from enrico.diffcluster_model import MultimodalEnricoModel
     else: 
         raise NotImplementedError("Model type not implemented")
     
