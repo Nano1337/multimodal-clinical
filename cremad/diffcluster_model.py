@@ -1,80 +1,50 @@
-from gc import freeze
 import torch 
 import torch.nn as nn
 import torch.nn.functional as F
+
 import pytorch_lightning as pl
 from torchvision import models as tmodels
+
+from cremad.backbone import resnet18
+
 from utils.BaseModel import JointLogitsBaseModel
 from torch.optim.lr_scheduler import StepLR
+# from torch_kmeans import SoftKMeans
+# from cuml.cluster import KMeans
 from torch_kmeans import SoftKMeans
+from sklearn.metrics import pairwise_distances_argmin_min
 
-class ResNet18Slim(nn.Module):
-    """Extends ResNet18 with a separate patch embedding layer.
+class tokenized_resnet18(nn.Module):
+    def __init__(self, modality='audio', patch_size=3):
+        super(tokenized_resnet18, self).__init__()
+        self.model = resnet18(modality=modality)
+        self.modality = modality
+        self.patch_size = patch_size
+        self.patch_embedding = nn.Conv2d(512, 512, kernel_size=patch_size, stride=patch_size)
     
-    Slimmer version of ResNet18 model with a patch embedding layer.
-    """
-    
-    def __init__(self, hiddim, patch_size=2, pretrained=True, freeze_features=True):
-        """Initialize ResNet18Slim Object.
 
-        Args:
-            hiddim (int): Hidden dimension size
-            patch_size (int): Size of each patch (default: 16)
-            pretrained (bool, optional): Whether to instantiate ResNet18 from Pretrained. Defaults to True.
-            freeze_features (bool, optional): Whether to keep ResNet18 features frozen. Defaults to True.
-        """
-        super(ResNet18Slim, self).__init__()
-        self.hiddim = hiddim
-        self.model = tmodels.resnet18(pretrained=pretrained)
-        
-        # Remove the last fully connected layer and adaptive average pooling layer
-        self.model = nn.Sequential(*list(self.model.children())[:-2])
-        
-        # Calculate the output size of the ResNet18 feature extractor
-        self.feature_size = self.model[-1][-1].bn2.num_features
-        
-        # Calculate the number of patches
-        self.num_patches = (256 // patch_size) * (128 // patch_size) 
-        
-        # Create the patch embedding layer
-        self.patch_embedding = nn.Conv2d(self.feature_size, hiddim, kernel_size=patch_size, stride=patch_size)
-        
-        if freeze_features:
-            for param in self.model.parameters():
-                param.requires_grad = False
-
-    def forward(self, x):
-        """Apply ResNet18Slim to Layer Input.
-
-        Args:
-            x (torch.Tensor): Layer Input
-
-        Returns:
-            torch.Tensor: Patch tokens
-        """
-        features = self.model(x)
-        print(features.size())
-        exit()
-        patch_tokens = self.patch_embedding(features)
-        patch_tokens = patch_tokens.flatten(2).transpose(1, 2)
-        return patch_tokens
 
 class FusionNet(nn.Module):
     def __init__(
             self, 
             args,
             num_classes, 
-            loss_fn,
-            hiddim=512,
+            loss_fn
             ):
         super(FusionNet, self).__init__()
         self.args = args
-        self.x1_model = ResNet18Slim(hiddim, freeze_features=False)
-        self.x2_model = ResNet18Slim(hiddim, freeze_features=False)
+        self.hiddim = 512
+        self.x1_model = resnet18(modality='audio') # 33 tokens per modality
+        self.x1_classifier = nn.Linear(self.hiddim, num_classes)
+        self.x2_model = resnet18(modality='visual')
+        self.x2_classifier = nn.Linear(self.hiddim, num_classes)
+        self.patch_size = 3
         self.num_classes = num_classes
         self.loss_fn = loss_fn
-        
-        self.k = 2 # number of centroids
+        self.patch_embedding_a = nn.Conv2d(512, 512, kernel_size=self.patch_size, stride=self.patch_size)
+        self.patch_embedding_v = nn.Conv2d(512, 512, kernel_size=self.patch_size, stride=self.patch_size)
+            
+        self.k = 5 # number of centroids
         self.kmeans = SoftKMeans(
             n_clusters=self.k, 
             n_init=1, 
@@ -83,12 +53,15 @@ class FusionNet(nn.Module):
             verbose=False, 
             )
         
-        # Adjust the final classifier to accept the flattened centroids
-        self.classifier = nn.Linear(hiddim * self.k, hiddim)
-        # self.final_classifier = nn.Linear(hiddim, num_classes)
+        self.classifier = nn.Linear(self.hiddim * self.k, self.hiddim)
 
+    def pad_input(self, out):
+        pad_height = (self.patch_size - out.shape[2] % self.patch_size) % self.patch_size
+        pad_width = (self.patch_size - out.shape[3] % self.patch_size) % self.patch_size
+        return F.pad(out, (0, pad_width, 0, pad_height))
+    
     def forward(self, x1_data, x2_data, label):
-        """ Forward pass for the FusionNet model. Fuses at token level using a transformer encoder.
+        """ Forward pass for the FusionNet model. Fuses at logit level.
         
         Args:
             x1_data (torch.Tensor): Input data for modality 1
@@ -96,38 +69,48 @@ class FusionNet(nn.Module):
             label (torch.Tensor): Ground truth label
 
         Returns:
-            Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]: Tuple containing the logits for modality 1, modality 2, fused logits, and loss
+            Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]: Tuple containing the logits for modality 1, modality 2, average logits, and loss
         """
 
-        # get unimodal feature tokens
-        x1_tokens = self.x1_model(x1_data)
-        x2_tokens = self.x2_model(x2_data)
+        # put through unimodal models 
+        # TODO: refactor this to be more modular
+        a = self.x1_model(x1_data)
+        v = self.x2_model(x2_data)
+        (_, C, H, W) = v.size()
+        B = a.size()[0]
+        v = v.view(B, -1, C, H, W)
+        v = v.permute(0, 2, 1, 3, 4)
+        v = v.view(B, C, 3, -1)
+        a = self.pad_input(a)
+        v = self.pad_input(v)
+        a = self.patch_embedding_a(a)
+        v = self.patch_embedding_v(v)
+        a = a.flatten(2).transpose(1, 2) # 33 tokens
+        v = v.flatten(2).transpose(1, 2) # 17 tokens
 
-        # Concatenate tokens from both modalities
-        fused_tokens = torch.cat((x1_tokens, x2_tokens), dim=1)
-
-        # calculate sample-wise centroids
+        # get centroids
+        fused_tokens = torch.cat((a, v), dim=1)
+        
         centroids = self.kmeans(fused_tokens).centers
-
-        # Flatten centroids to pass through the linear classifier
         centroids_flattened = centroids.flatten(start_dim=1)
 
+        # classify
         fused_logits = self.classifier(centroids_flattened)
         
         loss = self.loss_fn(fused_logits, label)
 
         return (None, None, fused_logits, loss)
 
-class MultimodalEnricoModel(JointLogitsBaseModel): 
+class MultimodalCremadModel(JointLogitsBaseModel): 
 
     def __init__(self, args): 
-        """Initialize MultimodalEnricoModel.
+        """Initialize MultimodalCremadModel.
 
         Args: 
             args (argparse.Namespace): Arguments for the model        
         """
 
-        super(MultimodalEnricoModel, self).__init__(args)
+        super(MultimodalCremadModel, self).__init__(args)
 
         self.args = args
         self.model = self._build_model()
@@ -153,6 +136,13 @@ class MultimodalEnricoModel(JointLogitsBaseModel):
             "test_logits": [],
             "test_labels": [],
         }
+
+        path = "/home/haoli/Documents/multimodal-clinical/data/cremad/_ckpts/cremad_cls6_ensemble_optimal_double/distinctive-snowball-399_best.ckpt"
+        state_dict = torch.load(path)["state_dict"]
+        for key in list(state_dict.keys()):
+            if "model." in key:
+                state_dict[key.replace("model.", "", 1)] = state_dict.pop(key)
+        self.model.load_state_dict(state_dict, strict=False)
 
     def forward(self, x1, x2, label): 
         return self.model(x1, x2, label)
