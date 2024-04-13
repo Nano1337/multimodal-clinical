@@ -109,7 +109,26 @@ if __name__ == "__main__":
     args = parser.parse_args()
     setattr(args, 'data_path', dirpath)
 
-    train_set, val_set, test_set = get_data(-1, imputed_path=dirpath)
+    train_set, val_set, test_set = get_data(7, imputed_path=dirpath)
+
+    from collections import Counter
+    import pandas as pd
+
+    # Extract labels from the training set
+    train_labels = [sample[2] for sample in train_set]
+
+    # Count the occurrence of each label
+    label_distribution = Counter(train_labels)
+
+    # Convert the distribution dictionary to a pandas DataFrame for pretty printing
+    label_distribution_df = pd.DataFrame(list(label_distribution.items()), columns=['Label', 'Count'])
+
+    # Sort the DataFrame by label for readability
+    label_distribution_df.sort_values(by='Label', inplace=True)
+
+    # Print the label distribution in table format
+    print("Label Distribution in Training Set:")
+    print(label_distribution_df.to_string(index=False))
 
     #train_sampler = make_balanced_sampler(train_set.label)
 
