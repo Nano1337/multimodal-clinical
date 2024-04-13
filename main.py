@@ -11,6 +11,8 @@ elif arg.dir == "food101":
     from food101.run_training import run_training
 elif arg.dir == "enrico":
     from enrico.run_training import run_training
+elif arg.dir == "mimic":
+    from mimic.run_training import run_training
 else: 
     raise NotImplementedError("Please specify a directory to run")
 

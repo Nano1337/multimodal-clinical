@@ -3,6 +3,7 @@ From MultiBench: https://github.com/pliang279/MultiBench/blob/main/datasets/mimi
 """
 
 """Implements dataloaders for generic MIMIC tasks."""
+import numpy as np
 from tqdm import tqdm
 import sys
 import os
@@ -12,6 +13,9 @@ import pickle
 import copy
 sys.path.append(os.path.dirname(os.path.dirname(os.getcwd())))
 
+import argparse
+import torch
+from torch.utils.data import WeightedRandomSampler, DataLoader
 
 """
 NOTE: use task = -1 for the 6-way mortality classification task. 
@@ -24,7 +28,7 @@ Mortality classes are predicting on how long from the date the data was recorded
 - 1 year
 - 1+ year
 """
-def get_dataset(task, imputed_path='data/im.pk'):
+def get_data(task, imputed_path='data/im.pk'):
     """Get datasets for MIMIC 
 
     Args:
@@ -89,3 +93,29 @@ def get_dataset(task, imputed_path='data/im.pk'):
 
 
     return trains, valids, tests
+
+def train_sampler(train_dataset):
+    # extract label from dataset
+    labels = [sample[2] for sample in train_dataset]
+    class_counts = torch.bincount(torch.tensor(labels))
+    class_weights = 1. / class_counts
+    sample_weights = class_weights[labels]
+    sampler = WeightedRandomSampler(sample_weights, len(labels), replacement=True)
+    return sampler
+
+if __name__ == "__main__":
+    dirpath = "../data/mimic/im.pk"
+    parser = argparse.ArgumentParser()
+    args = parser.parse_args()
+    setattr(args, 'data_path', dirpath)
+
+    train_set, val_set, test_set = get_data(-1, imputed_path=dirpath)
+
+    #train_sampler = make_balanced_sampler(train_set.label)
+
+    # train_loader = DataLoader(
+    #     train_set, 
+    #     batch_size=16, 
+    #     collate_fn=train_set.custom_collate, 
+    #     sampler=train_sampler
+    # )
