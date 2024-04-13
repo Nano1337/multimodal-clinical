@@ -124,6 +124,9 @@ class MultimodalMimicModel(EnsembleBaseModel):
         """
         super(MultimodalMimicModel, self).__init__(args)
 
+        self.w1 = 0.8
+        self.w2 = 1.5
+
     def cast_dtype(self, batch): 
         x1, x2, label = batch
         x1 = x1.to(self.dtype)
@@ -151,10 +154,10 @@ class MultimodalMimicModel(EnsembleBaseModel):
         # Calculate acc, unimodal acc not uncalibrated
         x1_acc_cal = torch.mean((torch.argmax(x1_logits, dim=1) == label).float())
         x2_acc_cal = torch.mean((torch.argmax(x2_logits, dim=1) == label).float())
-        avg_logits = (x1_logits + x2_logits) / 2
+        avg_logits = self.w1*x1_logits + self.w2*x2_logits
         preds = torch.argmax(avg_logits, dim=1)
-        joint_acc = torch.mean((torch.argmax(avg_logits, dim=1) == label).float())
-        avg_loss = (x1_loss + x2_loss) 
+        joint_acc = torch.mean((preds == label).float())
+        avg_loss = self.w1*x1_loss + self.w2*x2_loss
 
         # Log loss and accuracy
         self.log("train_step/train_loss", avg_loss, on_step=True, on_epoch=True, prog_bar=False, logger=True)

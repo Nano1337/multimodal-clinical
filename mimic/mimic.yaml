@@ -15,6 +15,6 @@ alpha: 0.8 # recommended setting 0.8 for Crema-D
 # main settings that need to be checked
 use_wandb: True
 model_type: "ensemble"
-group_name: "mimic_m6_ensemble_baseline_trainweightedsampler_lr=0.1"
-seed: 5
-use_scheduler: False 
+group_name: "mimic_m6_ensemble_baseline_trainweightedsampler_lr=0.01_0.8x1_1.5x2"
+seed: 10
+use_scheduler: False
